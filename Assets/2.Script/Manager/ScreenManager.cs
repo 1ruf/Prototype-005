@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 
 public class ScreenManager : MonoBehaviour
 {
+    [SerializeField] private float _interactableRadius;
     [SerializeField] private Texture2D _mouseCursor;
 
     private void OnEnable()
@@ -36,7 +37,7 @@ public class ScreenManager : MonoBehaviour
         Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
 
         RaycastHit hitInfo;
-        if (Physics.Raycast(ray, out hitInfo, 5))
+        if (Physics.Raycast(ray, out hitInfo, _interactableRadius))
         {
             if (hitInfo.transform.TryGetComponent(out IInteractable interaction))
             {
@@ -44,15 +45,15 @@ public class ScreenManager : MonoBehaviour
                 {
                     interaction.Interact();
                 }
-                Highlight(true);
+                Highlight(true, 0);
                 return;
             }
         }
-        Highlight(false);
+        Highlight(false, 0.1f);
     }
 
-    private void Highlight(bool value)
+    private void Highlight(bool value, float time = 0)
     {
-        Manager.Instance.UIManager.SetInteractUI(value,0.1f);
+        Manager.Instance.UIManager.SetInteractUI(value,time);
     }
 }

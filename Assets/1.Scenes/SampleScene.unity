@@ -2147,7 +2147,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _speed: 8
   _acceleration: 35
-  _deceleration: 35
+  _deceleration: 38
   _mass: 7
   _controller: {fileID: 241860208}
   _groundChecker: {fileID: 88427837}
@@ -4309,6 +4309,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 480c9ee75d188d3408a2d5776ba9b03e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _interactableRadius: 3
   _mouseCursor: {fileID: 2800000, guid: 156a02687566c254e94d6ecfe08052fd, type: 3}
 --- !u!1 &536534850
 GameObject:
@@ -8657,7 +8658,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1220071537
 Transform:
   m_ObjectHideFlags: 0
@@ -11232,7 +11233,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1692151452}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 364ad78b2e62dc5458d7a7b449c1fc8a, type: 3}
   m_Name: 

@@ -12,7 +12,7 @@ public class GrabTool : MonoBehaviour, IInteractable
 
     private void Update()
     {
-        SetGrab(true);
+        SetGrab(_isGrab);
     }
 
     private void SetGrab(bool value)
