@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: c35b2f66ada742c4bae66ba35f1b3547
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 253722
+  packageName: Ultimate Material Library
+  packageVersion: 1.0
+  assetPath: Assets/GreenMossGames/UltimateMaterialLibrary/Demo/Scripts/PlayerController.cs
+  uploadId: 593439
