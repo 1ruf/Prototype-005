@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 627d1e42909ff274bb7b24b86b8ad7ba
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 253722
+  packageName: Ultimate Material Library
+  packageVersion: 1.0
+  assetPath: Assets/GreenMossGames/UltimateMaterialLibrary/Materials/SRP/concrete/gravel_concrete.mat
+  uploadId: 593439
