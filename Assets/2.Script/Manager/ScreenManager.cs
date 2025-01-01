@@ -48,10 +48,11 @@ public class ScreenManager : MonoBehaviour
                 return;
             }
         }
+        Highlight(false);
     }
 
     private void Highlight(bool value)
     {
-        //
+        Manager.Instance.UIManager.SetInteractUI(value,0.1f);
     }
 }
