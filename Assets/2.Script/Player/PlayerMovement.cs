@@ -1,56 +1,3 @@
-//using UnityEngine;
-
-//public class PlayerMovement : MonoBehaviour
-//{
-//    [SerializeField] private float _speed;
-//    [SerializeField] private float _mass;
-
-//    [SerializeField] private CharacterController _controller;
-//    [SerializeField] private Transform _groundChecker;
-//    [SerializeField] private float _groundDistance = 0.4f;
-//    [SerializeField] private LayerMask _groundMask;
-
-//    private float _gravity = -9.81f;
-//    private Vector3 velocity;
-//    private bool isGround;
-//    void Update()
-//    {
-//        isGround = Physics.CheckSphere(_groundChecker.position, _groundDistance, _groundMask);
-
-//        if (isGround && velocity.y < 0)
-//        {
-//            velocity.y = -3f;
-//        }
-
-//        float x = Input.GetAxisRaw("Horizontal");
-//        float z = Input.GetAxisRaw("Vertical");
-
-//        Vector3 moveDir = transform.right * x + transform.forward * z;
-
-//        _controller.Move(moveDir.normalized * _speed * Time.deltaTime);
-
-
-//        velocity.y += _gravity * Time.deltaTime * _mass;
-
-//        _controller.Move(velocity * Time.deltaTime);
-//    }
-//}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
@@ -60,6 +7,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float _deceleration;
     [SerializeField] private float _mass;
 
+    [SerializeField] private Animator _camAnimator;
     [SerializeField] private CharacterController _controller;
     [SerializeField] private Transform _groundChecker;
     [SerializeField] private float _groundDistance = 0.4f;
@@ -67,14 +15,21 @@ public class PlayerMovement : MonoBehaviour
 
     private float _gravity = -9.81f;
     private Vector3 velocity;
+    private Vector3 targetDirection;
     private Vector3 currentSpeed = Vector3.zero;
     private bool isGround;
+
+    private void OnEnable()
+    {
+        _camAnimator.Play("Walk");
+    }
 
     void Update()
     {
         GroundCheck();
         Movement();
         Falling();
+        WalkAnimation();
     }
 
     private void Movement()
@@ -82,7 +37,7 @@ public class PlayerMovement : MonoBehaviour
         float x = Input.GetAxisRaw("Horizontal");
         float z = Input.GetAxisRaw("Vertical");
 
-        Vector3 targetDirection = (transform.right * x + transform.forward * z).normalized;
+        targetDirection = (transform.right * x + transform.forward * z).normalized;
 
         if (targetDirection.sqrMagnitude > 0)
         {
@@ -120,6 +75,13 @@ public class PlayerMovement : MonoBehaviour
         _controller.Move(velocity * Time.deltaTime);
     }
 
+
+    private void WalkAnimation()
+    {
+        float speedMagnitude = new Vector3(targetDirection.x, 0, targetDirection.z).sqrMagnitude;
+        print(targetDirection);
+        _camAnimator.speed = speedMagnitude;
+    }
 
     private void OnDrawGizmos()
     {
