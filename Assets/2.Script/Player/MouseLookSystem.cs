@@ -15,7 +15,13 @@ public class MouseLookSystem : MonoBehaviour
 
     void Update()
     {
-        float targetMouseX = Mathf.Clamp(Input.GetAxis("Mouse X") * _mouseSensitivity * Time.deltaTime,-_cameraXMoveSpeed, _cameraXMoveSpeed);
+        SetCamera();
+    }
+
+
+    private void SetCamera()
+    {
+        float targetMouseX = Mathf.Clamp(Input.GetAxis("Mouse X") * _mouseSensitivity * Time.deltaTime, -_cameraXMoveSpeed, _cameraXMoveSpeed);
         float targetMouseY = Input.GetAxis("Mouse Y") * _mouseSensitivity * Time.deltaTime;
 
         _currentMouseDelta.x = Mathf.SmoothDamp(_currentMouseDelta.x, targetMouseX, ref _currentMouseDeltaVelocity.x, _smoothTime);
@@ -28,5 +34,4 @@ public class MouseLookSystem : MonoBehaviour
 
         _playerBody.Rotate(Vector3.up * _currentMouseDelta.x);
     }
-
 }
