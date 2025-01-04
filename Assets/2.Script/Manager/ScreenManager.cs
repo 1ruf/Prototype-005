@@ -1,11 +1,13 @@
 using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using static UnityEngine.Rendering.DebugUI;
 
 public class ScreenManager : MonoBehaviour
 {
     [SerializeField] private float _interactableRadius;
     [SerializeField] private Texture2D _mouseCursor;
+    [SerializeField] private GameObject _lockedMouseCursor;
 
     private void OnEnable()
     {
@@ -30,6 +32,7 @@ public class ScreenManager : MonoBehaviour
     private void Update()
     {
         CheckInteract();
+        ReverseRealCursorVisible();
     }
 
     private void CheckInteract()
@@ -55,5 +58,20 @@ public class ScreenManager : MonoBehaviour
     private void Highlight(bool value, float time = 0)
     {
         Manager.Instance.UIManager.SetInteractUI(value,time);
+    }
+
+    public void ReverseRealCursorVisible()
+    {
+        if (Cursor.lockState == CursorLockMode.Locked)
+        {
+            Cursor.visible = false;
+            _lockedMouseCursor.SetActive(true);
+        }
+        else
+        {
+            Cursor.visible = true;
+            _lockedMouseCursor.SetActive(false);
+        }
+
     }
 }
