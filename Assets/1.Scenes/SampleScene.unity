@@ -2783,6 +2783,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _speed: 8
+  _sprintMultiply: 1.4
   _acceleration: 40
   _deceleration: 40
   _mass: 7
@@ -2793,6 +2794,10 @@ MonoBehaviour:
   _groundMask:
     serializedVersion: 2
     m_Bits: 128
+  _playerCamera: {fileID: 330585545}
+  _normalFOV: 60
+  _sprintFOV: 75
+  _fovTransitionSpeed: 5
 --- !u!1 &257966034
 GameObject:
   m_ObjectHideFlags: 0
@@ -3520,7 +3525,7 @@ Camera:
   m_ShutterSpeed: 0.005
   m_Aperture: 16
   m_FocusDistance: 10
-  m_FocalLength: 50
+  m_FocalLength: 20.78461
   m_BladeCount: 5
   m_Curvature: {x: 2, y: 11}
   m_BarrelClipping: 0.25
@@ -3535,7 +3540,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 60.000004
   orthographic: 0
   orthographic size: 5
   m_Depth: -1

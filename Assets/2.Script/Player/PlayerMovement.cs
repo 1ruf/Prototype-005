@@ -3,6 +3,7 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     [SerializeField] private float _speed;
+    [SerializeField] private float _sprintMultiply;
     [SerializeField] private float _acceleration;
     [SerializeField] private float _deceleration;
     [SerializeField] private float _mass;
@@ -12,6 +13,12 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private Transform _groundChecker;
     [SerializeField] private float _groundDistance = 0.4f;
     [SerializeField] private LayerMask _groundMask;
+
+    [Header("CameraSetting")]
+    [SerializeField] private Camera _playerCamera;
+    [SerializeField] private float _normalFOV = 60f;
+    [SerializeField] private float _sprintFOV = 75f;
+    [SerializeField] private float _fovTransitionSpeed = 1f;
 
     private float _gravity = -9.81f;
     private Vector3 velocity;
@@ -30,6 +37,16 @@ public class PlayerMovement : MonoBehaviour
         Movement();
         Falling();
         WalkAnimation();
+        AdjustFOV();
+    }
+
+    private float SprintCheck()
+    {
+        if (Input.GetKey(KeyCode.LeftShift))
+        {
+            return _sprintMultiply;
+        }
+        return 1;
     }
 
     private void Movement()
@@ -43,8 +60,8 @@ public class PlayerMovement : MonoBehaviour
         {
             currentSpeed = Vector3.MoveTowards(
                 currentSpeed,
-                targetDirection * _speed,
-                _acceleration * Time.deltaTime
+                targetDirection * _speed * SprintCheck(),
+                _acceleration * Time.deltaTime * SprintCheck()
             );
         }
         else
@@ -57,6 +74,16 @@ public class PlayerMovement : MonoBehaviour
         }
 
         _controller.Move(currentSpeed * Time.deltaTime);
+    }
+
+    private void AdjustFOV()
+    {
+        float targetFOV = Input.GetKey(KeyCode.LeftShift) ? _sprintFOV : _normalFOV;
+        _playerCamera.fieldOfView = Mathf.Lerp(
+            _playerCamera.fieldOfView,
+            targetFOV,
+            Time.deltaTime * _fovTransitionSpeed
+        );
     }
 
     private void GroundCheck()
@@ -78,9 +105,13 @@ public class PlayerMovement : MonoBehaviour
 
     private void WalkAnimation()
     {
-        float speedMagnitude = new Vector3(targetDirection.x, 0, targetDirection.z).sqrMagnitude;
-        print(targetDirection);
-        _camAnimator.speed = speedMagnitude;
+        float currentSpeedMagnitude = currentSpeed.magnitude;
+
+        float animationSpeed = currentSpeedMagnitude / _speed;
+
+        animationSpeed = Mathf.Clamp(animationSpeed, 0, 2f);
+
+        _camAnimator.speed = animationSpeed;
     }
 
     private void OnDrawGizmos()
