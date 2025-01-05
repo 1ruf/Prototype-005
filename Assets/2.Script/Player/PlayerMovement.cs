@@ -17,7 +17,7 @@ public class PlayerMovement : MonoBehaviour
     [Header("CameraSetting")]
     [SerializeField] private Camera _playerCamera;
     [SerializeField] private float _normalFOV = 60f;
-    [SerializeField] private float _sprintFOV = 75f;
+    [SerializeField] private float _sprintFOV = 67f;
     [SerializeField] private float _fovTransitionSpeed = 1f;
 
     private float _gravity = -9.81f;
@@ -44,8 +44,10 @@ public class PlayerMovement : MonoBehaviour
     {
         if (Input.GetKey(KeyCode.LeftShift))
         {
+            _camAnimator.SetBool("Running", true);
             return _sprintMultiply;
         }
+        _camAnimator.SetBool("Running", false);
         return 1;
     }
 
@@ -58,10 +60,11 @@ public class PlayerMovement : MonoBehaviour
 
         if (targetDirection.sqrMagnitude > 0)
         {
+            float sprintMultiple = SprintCheck();
             currentSpeed = Vector3.MoveTowards(
                 currentSpeed,
-                targetDirection * _speed * SprintCheck(),
-                _acceleration * Time.deltaTime * SprintCheck()
+                targetDirection * _speed * sprintMultiple,
+                _acceleration * Time.deltaTime * sprintMultiple
             );
         }
         else
@@ -109,7 +112,7 @@ public class PlayerMovement : MonoBehaviour
 
         float animationSpeed = currentSpeedMagnitude / _speed;
 
-        animationSpeed = Mathf.Clamp(animationSpeed, 0, 2f);
+        animationSpeed = Mathf.Clamp(animationSpeed, 0, 1f);
 
         _camAnimator.speed = animationSpeed;
     }
