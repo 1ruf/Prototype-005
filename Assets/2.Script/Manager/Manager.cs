@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class Manager : MonoBehaviour
 {
@@ -6,6 +7,7 @@ public class Manager : MonoBehaviour
 
     public ScreenManager ScreenManager;
     public UIManager UIManager;
+    public PlayerManager PlayerManager;
 
     private void Awake()
     {
