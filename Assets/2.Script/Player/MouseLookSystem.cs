@@ -28,10 +28,11 @@ public class MouseLookSystem : MonoBehaviour
         _currentMouseDelta.y = Mathf.SmoothDamp(_currentMouseDelta.y, targetMouseY, ref _currentMouseDeltaVelocity.y, _smoothTime);
 
         _xRotation -= _currentMouseDelta.y;
-        _xRotation = Mathf.Clamp(_xRotation, -_cameraMaxAngle, _cameraMaxAngle);
+        _xRotation = Mathf.Clamp(_xRotation, -_cameraMaxAngle, _cameraMaxAngle); // 각도 제한
 
         transform.localRotation = Quaternion.Euler(_xRotation, 0f, 0f);
 
         _playerBody.Rotate(Vector3.up * _currentMouseDelta.x);
     }
 }
+
