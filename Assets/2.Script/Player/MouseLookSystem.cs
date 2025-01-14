@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 
 public class MouseLookSystem : MonoBehaviour
@@ -29,10 +30,19 @@ public class MouseLookSystem : MonoBehaviour
 
         _xRotation -= _currentMouseDelta.y;
         _xRotation = Mathf.Clamp(_xRotation, -_cameraMaxAngle, _cameraMaxAngle); // 각도 제한
+        SetCameraAngle(new Vector3(_xRotation, 0f, 0f));
 
-        transform.localRotation = Quaternion.Euler(_xRotation, 0f, 0f);
+        SetBodyRotation(Vector3.up * _currentMouseDelta.x);
+    }
 
-        _playerBody.Rotate(Vector3.up * _currentMouseDelta.x);
+    private void SetBodyRotation(Vector3 rotation)
+    {
+        _playerBody.Rotate(rotation);
+    }
+
+    private void SetCameraAngle(Vector3 angle)
+    {
+        transform.localRotation = Quaternion.Euler(angle);
     }
 }
 
