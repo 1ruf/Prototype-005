@@ -30,7 +30,6 @@ public class PlayerMovement : MonoBehaviour
     {
         _camAnimator.Play("Walk");
     }
-
     void Update()
     {
         GroundCheck();
@@ -39,7 +38,6 @@ public class PlayerMovement : MonoBehaviour
         WalkAnimation();
         AdjustFOV();
     }
-
     private float SprintCheck()
     {
         if (Input.GetKey(KeyCode.LeftShift))
@@ -50,7 +48,6 @@ public class PlayerMovement : MonoBehaviour
         _camAnimator.SetBool("Running", false);
         return 1;
     }
-
     private void Movement()
     {
         float x = Input.GetAxisRaw("Horizontal");
@@ -78,7 +75,6 @@ public class PlayerMovement : MonoBehaviour
 
         _controller.Move(currentSpeed * Time.deltaTime);
     }
-
     private void AdjustFOV()
     {
         float targetFOV = Input.GetKey(KeyCode.LeftShift) ? _sprintFOV : _normalFOV;
@@ -88,7 +84,6 @@ public class PlayerMovement : MonoBehaviour
             Time.deltaTime * _fovTransitionSpeed
         );
     }
-
     private void GroundCheck()
     {
         isGround = Physics.CheckSphere(_groundChecker.position, _groundDistance, _groundMask);
@@ -104,7 +99,6 @@ public class PlayerMovement : MonoBehaviour
         velocity.y += _gravity * Time.deltaTime * _mass;
         _controller.Move(velocity * Time.deltaTime);
     }
-
 
     private void WalkAnimation()
     {
