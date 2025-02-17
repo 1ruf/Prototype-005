@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 5601e4117dbe1c84a8407c3604a42a0a
+timeCreated: 1499327714
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Prefabs/Wast_Chest.prefab
+  uploadId: 301735

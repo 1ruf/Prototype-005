@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: b247ac0c95237ee409f161b1397d7af2
+timeCreated: 1495636671
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Materials/Antlers.mat
+  uploadId: 301735

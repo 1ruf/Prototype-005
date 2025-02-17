@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: e74a5564f3f9fb94bbfe80cbe851605b
+timeCreated: 1495634258
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Materials/SmallTable.mat
+  uploadId: 301735

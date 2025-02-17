@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 9855ee5794623df4b96b88246bc644de
+timeCreated: 1498494825
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Materials/Door_Frame.mat
+  uploadId: 301735

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 65c45bfeb27ea2d4f93252a31a90513c
+timeCreated: 1499327608
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Prefabs/Wast_Chair.prefab
+  uploadId: 301735

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 28253195bcf82d443b26dd7e1370fca1
+timeCreated: 1499327569
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Prefabs/Wast_Tap.prefab
+  uploadId: 301735

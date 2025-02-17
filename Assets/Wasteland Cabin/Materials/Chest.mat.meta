@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: d1ce4e90a948ef147a6b981f7dca9eec
+timeCreated: 1495633643
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Materials/Chest.mat
+  uploadId: 301735

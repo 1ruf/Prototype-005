@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 0963a7147c11771498e0fcf92de5ee40
+timeCreated: 1499327642
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Prefabs/Wast_Carpet.prefab
+  uploadId: 301735

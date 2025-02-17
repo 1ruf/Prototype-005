@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: f4a364e1447f36348b3515ce607e7d15
+timeCreated: 1498898897
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Materials/Carpet.mat
+  uploadId: 301735

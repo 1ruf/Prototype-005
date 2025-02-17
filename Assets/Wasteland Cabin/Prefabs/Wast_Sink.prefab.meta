@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 2056c82661e70664495aabe667e7c5af
+timeCreated: 1499327593
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Prefabs/Wast_Sink.prefab
+  uploadId: 301735

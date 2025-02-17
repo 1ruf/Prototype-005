@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: c1fe8cead070d424d97cbee397ce5382
+timeCreated: 1498907832
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Materials/Axe.mat
+  uploadId: 301735

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 6e48ea11e86e00849be2b98550b49887
+timeCreated: 1499281404
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Materials/Suspension.mat
+  uploadId: 301735

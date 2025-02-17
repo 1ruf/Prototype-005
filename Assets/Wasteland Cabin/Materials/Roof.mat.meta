@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 3740cdb01988dda45aad65529dd4edb7
+timeCreated: 1495471102
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Materials/Roof.mat
+  uploadId: 301735

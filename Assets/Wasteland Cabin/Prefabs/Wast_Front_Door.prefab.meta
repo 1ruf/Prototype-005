@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: c67d454dd6e1195469457ef051536a6a
+timeCreated: 1499327727
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Prefabs/Wast_Front_Door.prefab
+  uploadId: 301735

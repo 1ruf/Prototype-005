@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 8777a862572115142a5b2f9f809a85d3
+timeCreated: 1499100788
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 94865
+  packageName: Wasteland Cabin
+  packageVersion: 1.0
+  assetPath: Assets/Wasteland Cabin/Materials/Wardrobe_Door.mat
+  uploadId: 301735
