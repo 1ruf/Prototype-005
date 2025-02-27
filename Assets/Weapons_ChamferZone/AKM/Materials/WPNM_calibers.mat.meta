@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bb6be6fcc01956b459fe06beffe3d419
+timeCreated: 1464042884
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 63654
+  packageName: Free FPS AKM & Ammuniton types
+  packageVersion: 1.0
+  assetPath: Assets/Weapons_ChamferZone/AKM/Materials/WPNM_calibers.mat
+  uploadId: 119504
