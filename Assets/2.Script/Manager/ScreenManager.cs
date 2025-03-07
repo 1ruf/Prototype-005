@@ -44,7 +44,7 @@ public class ScreenManager : MonoBehaviour
         {
             if (hitInfo.transform.TryGetComponent(out IInteractable interaction))
             {
-                if (Mouse.current.press.wasPressedThisFrame)
+                if (Input.GetKeyDown(KeyCode.E)/*Mouse.current.press.wasPressedThisFrame*/)
                 {
                     interaction.Interact();
                 }
