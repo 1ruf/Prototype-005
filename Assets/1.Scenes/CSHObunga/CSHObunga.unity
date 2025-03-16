@@ -26480,7 +26480,7 @@ MonoBehaviour:
   visual: {fileID: 744861455}
   ui: {fileID: 1833352932}
   moveSpeed: 50
-  rotationSpeed: 10
+  rotationSpeed: 5
 --- !u!4 &537754382
 Transform:
   m_ObjectHideFlags: 0

@@ -37,21 +37,17 @@ public class CSHEnemy : MonoBehaviour
     {
         if (target == null) return;
 
-        // 목표 방향 계산
         Vector3 targetDirection = (target.position - transform.position).normalized;
         targetDirection.y = 0; // Y축 이동 방지
 
-        // 이동 방향을 점진적으로 플레이어 방향으로 조정
         moveDirection = Vector3.Lerp(moveDirection, targetDirection, rotationSpeed * Time.deltaTime).normalized;
 
-        // 이동 적용 (부드러운 속도 유지)
         rb.linearVelocity = moveDirection * moveSpeed;
 
-        // 부드러운 회전 적용
         if (moveDirection != Vector3.zero)
         {
             Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-            visual.rotation = Quaternion.Slerp(visual.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+            visual.rotation = targetRotation;
         }
     }
 
