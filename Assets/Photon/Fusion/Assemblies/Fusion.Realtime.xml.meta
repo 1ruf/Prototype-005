@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: d30bfd6550dcc4b65ab2f943121846fa
+labels:
+- FusionCodeDoc
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 267958
+  packageName: Photon Fusion
+  packageVersion: 2.0.12
+  assetPath: Assets/Photon/Fusion/Assemblies/Fusion.Realtime.xml
+  uploadId: 888248

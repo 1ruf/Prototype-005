@@ -8,10 +8,35 @@ public class ScreenManager : MonoBehaviour
     [SerializeField] private Texture2D _mouseCursor;
     [SerializeField] private GameObject _lockedMouseCursor;
 
+    private PlayerMovement localPlayer;
+    private Camera localCamera;
+    private bool hasLocalPlayer;
+
     private void OnEnable()
     {
         MousepointerLock(true);
         SetCursor(_mouseCursor);
+    }
+
+    public void SetLocalPlayer(PlayerMovement player)
+    {
+        localPlayer = player;
+        hasLocalPlayer = player != null;
+        localCamera = player != null ? player.GetComponentInChildren<Camera>(true) : null;
+
+        if (localCamera != null)
+            localCamera.enabled = true;
+    }
+
+    public void ClearLocalPlayer(PlayerMovement player)
+    {
+        if (localPlayer != player)
+            return;
+
+        localPlayer = null;
+        localCamera = null;
+        hasLocalPlayer = false;
+        Highlight(false, 0f);
     }
 
     public void MousepointerLock(bool locked)
@@ -30,13 +55,20 @@ public class ScreenManager : MonoBehaviour
 
     private void Update()
     {
-        CheckInteract();
         ReverseRealCursorVisible();
+
+        if (!ResolveLocalCamera())
+        {
+            Highlight(false, 0f);
+            return;
+        }
+
+        CheckInteract();
     }
 
     private void CheckInteract()
     {
-        Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
+        Ray ray = new Ray(localCamera.transform.position, localCamera.transform.forward);
 
         RaycastHit hitInfo;
         if (Physics.Raycast(ray, out hitInfo, _interactableRadius))
@@ -56,6 +88,9 @@ public class ScreenManager : MonoBehaviour
 
     private void Highlight(bool value, float time = 0)
     {
+        if (Manager.Instance == null || Manager.Instance.UIManager == null)
+            return;
+
         Manager.Instance.UIManager.SetInteractUI(value,time);
     }
 
@@ -64,13 +99,35 @@ public class ScreenManager : MonoBehaviour
         if (Cursor.lockState == CursorLockMode.Locked)
         {
             Cursor.visible = false;
-            _lockedMouseCursor.SetActive(true);
+            if (_lockedMouseCursor != null)
+                _lockedMouseCursor.SetActive(true);
         }
         else
         {
             Cursor.visible = true;
-            _lockedMouseCursor.SetActive(false);
+            if (_lockedMouseCursor != null)
+                _lockedMouseCursor.SetActive(false);
         }
 
+    }
+
+    private bool ResolveLocalCamera()
+    {
+        if (hasLocalPlayer && localPlayer == null)
+        {
+            localCamera = null;
+            hasLocalPlayer = false;
+        }
+
+        if (localCamera != null && localCamera.isActiveAndEnabled)
+            return true;
+
+        if (localPlayer != null)
+            localCamera = localPlayer.GetComponentInChildren<Camera>(true);
+
+        if (localCamera == null)
+            localCamera = Camera.main;
+
+        return localCamera != null && localCamera.isActiveAndEnabled;
     }
 }

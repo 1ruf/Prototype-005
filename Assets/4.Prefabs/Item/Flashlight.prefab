@@ -27,7 +27,7 @@ Transform:
   m_GameObject: {fileID: 6613574690129151782}
   serializedVersion: 2
   m_LocalRotation: {x: -0.03489962, y: -0, z: -0, w: 0.99939084}
-  m_LocalPosition: {x: 0, y: 0, z: 0.225}
+  m_LocalPosition: {x: 0, y: 0, z: 0.4859992}
   m_LocalScale: {x: 0.041327994, y: 0.060410842, z: 0.2951433}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -44,10 +44,10 @@ Light:
   serializedVersion: 11
   m_Type: 0
   m_Color: {r: 1, g: 0.9932076, b: 0.94905657, a: 1}
-  m_Intensity: 120
-  m_Range: 25
-  m_SpotAngle: 96.26837
-  m_InnerSpotAngle: 0
+  m_Intensity: 225
+  m_Range: 120
+  m_SpotAngle: 76
+  m_InnerSpotAngle: 41.484985
   m_CookieSize: 10
   m_Shadows:
     m_Type: 1
@@ -75,7 +75,7 @@ Light:
       e32: 0
       e33: 1
     m_UseCullingMatrixOverride: 0
-  m_Cookie: {fileID: 0}
+  m_Cookie: {fileID: 2800000, guid: 48627a03e11104142a8b24a1fa795f91, type: 3}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
@@ -148,10 +148,10 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8490248189659873257}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0.542, z: 6.813}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.2, y: 0.2, z: 0.2}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 4034262124766411710}
   - {fileID: 8932204132868815533}
@@ -169,7 +169,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af2234ddf16531147a1626170383450a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _light: {fileID: 6613574690129151782}
+  itemRoot: {fileID: 6710446197891824880}
+  renderers: []
+  heldColliders: []
+  activeObjects:
+  - {fileID: 6613574690129151782}
+  firstPersonPosition: {x: -0.3, y: -0.24, z: 0.58}
+  firstPersonEuler: {x: 0, y: 0, z: 0}
+  thirdPersonPosition: {x: -0.1, y: 1.54, z: 0.92}
+  thirdPersonEuler: {x: 0, y: 0, z: 0}
+  lights:
+  - {fileID: 1918534165541168237}
+  beamObject: {fileID: 6613574690129151782}
+  firstPersonSpotAngle: 64
+  thirdPersonSpotAngle: 72
+  runSwayPitch: 6
+  runSwayYaw: 0
+  runSwayRoll: 0
+  runSwayFrequency: 12
+  walkSwayMultiplier: 0.45
+  thirdPersonLookPitchMultiplier: 0
 --- !u!136 &2376807879390504767
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -246,7 +265,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b8b7af8db011f0842878549f6ab90ca0, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: 0.261
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b8b7af8db011f0842878549f6ab90ca0, type: 3}
       propertyPath: m_LocalRotation.w
@@ -258,11 +277,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b8b7af8db011f0842878549f6ab90ca0, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b8b7af8db011f0842878549f6ab90ca0, type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b8b7af8db011f0842878549f6ab90ca0, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -279,7 +298,7 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: b8b7af8db011f0842878549f6ab90ca0, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 6be124859e42b4b418b3d29d9790e3a5, type: 2}
+      objectReference: {fileID: 2100000, guid: 1d73d0cb74f6c4d47b5de633d9bbf8e3, type: 2}
     - target: {fileID: 919132149155446097, guid: b8b7af8db011f0842878549f6ab90ca0, type: 3}
       propertyPath: m_Name
       value: flashlight

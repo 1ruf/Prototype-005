@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: fe080a3ec4f6d4af1aea87aff18bf1b8
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 267958
+  packageName: Photon Fusion
+  packageVersion: 2.0.12
+  assetPath: Assets/Photon/Fusion/Assemblies/Release/Fusion.Common.dll.release
+  uploadId: 888248

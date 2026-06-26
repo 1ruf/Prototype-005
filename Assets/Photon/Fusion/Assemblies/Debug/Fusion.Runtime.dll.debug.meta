@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f0e034d5ba3d24e75bc16d027e9323aa
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 267958
+  packageName: Photon Fusion
+  packageVersion: 2.0.12
+  assetPath: Assets/Photon/Fusion/Assemblies/Debug/Fusion.Runtime.dll.debug
+  uploadId: 888248

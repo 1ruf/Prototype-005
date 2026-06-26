@@ -8,6 +8,9 @@ public class UIManager : MonoBehaviour
 
     public void SetInteractUI(bool value, float time = 0)
     {
+        if (_interacableIcon == null)
+            return;
+
         if(value) _interacableIcon.DOFade(1, time);
         else _interacableIcon.DOFade(0, time);
     }
