@@ -18,6 +18,22 @@ public class EnemyAnimationTrigger : MonoBehaviour
         enemy?.ApplyKillKnockbackAnimationEvent();
     }
 
+    public void SpawnKillBloodSplatterAnimationEvent(int count)
+    {
+        ResolveReferences();
+        enemy?.SpawnKillBloodSplatterAnimationEvent(count);
+    }
+
+    public void AnimationEvent_SpawnKillBloodSplatter(int count)
+    {
+        SpawnKillBloodSplatterAnimationEvent(count);
+    }
+
+    public void OnKillBloodSplatter(int count)
+    {
+        SpawnKillBloodSplatterAnimationEvent(count);
+    }
+
     public void PlayAudioEvent(int id)
     {
         audios[id].Play();

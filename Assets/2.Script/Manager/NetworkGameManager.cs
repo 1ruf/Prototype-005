@@ -83,6 +83,14 @@ public class NetworkGameManager : MonoBehaviour, INetworkRunnerCallbacks
             Debug.LogError($"Fusion start failed: {result.ShutdownReason}");
     }
 
+    private void OnDestroy()
+    {
+        if (Instance != this)
+            return;
+
+        Instance = null;
+    }
+
     public void SpawnEnemyNear(Vector3 origin)
     {
         if (runner == null || !runner.IsServer || enemyPrefab == null)

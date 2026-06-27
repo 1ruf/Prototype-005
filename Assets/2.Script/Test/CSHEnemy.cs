@@ -5,7 +5,7 @@ using UnityEngine.AI;
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(NavMeshAgent))]
-public class CSHEnemy : NetworkBehaviour
+public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 {
     private enum EnemyStateId
     {
@@ -74,8 +74,10 @@ public class CSHEnemy : NetworkBehaviour
     private int renderedAttackSequence;
     private int renderedKillSequence;
     private IKnockbackable pendingKillKnockback;
+    private RagdollEntityComponent pendingKillRagdoll;
     private Vector3 pendingKillKnockbackDirection;
     private float localKillAnimationEndTime;
+    private GameObject owner;
 
     [Networked] private Vector3 NetworkPosition { get; set; }
     [Networked] private Quaternion NetworkRotation { get; set; }
@@ -87,6 +89,12 @@ public class CSHEnemy : NetworkBehaviour
     [Networked] private int NetworkKillSequence { get; set; }
 
     public int RealtimeEnemyId { get; private set; }
+    public GameObject Owner => owner != null ? owner : gameObject;
+
+    public void Initialize(GameObject entityOwner)
+    {
+        owner = entityOwner != null ? entityOwner : gameObject;
+    }
 
     public void SetRealtimeEnemyId(int enemyId)
     {
@@ -95,6 +103,8 @@ public class CSHEnemy : NetworkBehaviour
 
     private void Awake()
     {
+        Initialize(gameObject);
+
         if (ui != null)
             ui.SetActive(false);
 
@@ -109,6 +119,16 @@ public class CSHEnemy : NetworkBehaviour
         SnapToNavMesh();
         ResolveAnimationDriver();
         CreateStates();
+    }
+
+    private void OnEnable()
+    {
+        EnemyRuntimeRegistry.Register(this);
+    }
+
+    private void OnDisable()
+    {
+        EnemyRuntimeRegistry.Unregister(this);
     }
 
     private void Start()
@@ -336,12 +356,11 @@ public class CSHEnemy : NetworkBehaviour
         if (enemySeparationRadius <= 0f || enemySeparationStrength <= 0f)
             return Vector3.zero;
 
-        CSHEnemy[] enemies = FindObjectsByType<CSHEnemy>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         Vector3 separation = Vector3.zero;
         Vector3 position = transform.position;
         float radiusSqr = enemySeparationRadius * enemySeparationRadius;
 
-        foreach (CSHEnemy other in enemies)
+        foreach (CSHEnemy other in EnemyRuntimeRegistry.Enemies)
         {
             if (other == null || other == this)
                 continue;
@@ -402,11 +421,10 @@ public class CSHEnemy : NetworkBehaviour
 
     private bool TryFindVisibleTarget(out Transform foundTarget)
     {
-        PlayerMovement[] players = FindObjectsByType<PlayerMovement>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
         float closestDistance = float.PositiveInfinity;
         foundTarget = null;
 
-        foreach (PlayerMovement player in players)
+        foreach (PlayerMovement player in PlayerRuntimeRegistry.Players)
         {
             if (player == null || IsDeadTarget(player.transform))
                 continue;
@@ -783,6 +801,7 @@ public class CSHEnemy : NetworkBehaviour
 
         KillAnimationTimer = TickTimer.None;
         pendingKillKnockback = null;
+        pendingKillRagdoll = null;
         localKillAnimationEndTime = 0f;
     }
 
@@ -802,7 +821,7 @@ public class CSHEnemy : NetworkBehaviour
         ApplyAnimationState(EnemyAnimationState.Attack, true);
     }
 
-    private void TriggerKillAnimation(IKnockbackable knockbackable, Vector3 knockbackDirection, Transform killedVisual)
+    private void TriggerKillAnimation(IKnockbackable knockbackable, RagdollEntityComponent ragdoll, Vector3 knockbackDirection, Transform killedVisual)
     {
         if (Object != null && !Object.HasStateAuthority)
             return;
@@ -810,6 +829,7 @@ public class CSHEnemy : NetworkBehaviour
         StopMoving();
         RotateVisualTowardKillTarget(killedVisual);
         pendingKillKnockback = knockbackable;
+        pendingKillRagdoll = ragdoll;
         pendingKillKnockbackDirection = knockbackDirection.sqrMagnitude > 0.0001f ? knockbackDirection.normalized : transform.forward;
         float killDuration = GetKillAnimationDuration();
         localKillAnimationEndTime = Time.time + killDuration;
@@ -876,6 +896,24 @@ public class CSHEnemy : NetworkBehaviour
         ApplyKillKnockbackAnimationEvent();
     }
 
+    public void SpawnKillBloodSplatterAnimationEvent(int count)
+    {
+        if (Object != null && !Object.HasStateAuthority)
+            return;
+
+        pendingKillRagdoll?.RequestBloodSplatter(count);
+    }
+
+    public void AnimationEvent_SpawnKillBloodSplatter(int count)
+    {
+        SpawnKillBloodSplatterAnimationEvent(count);
+    }
+
+    public void OnKillBloodSplatter(int count)
+    {
+        SpawnKillBloodSplatterAnimationEvent(count);
+    }
+
     private void ApplyAnimationState(EnemyAnimationState stateId, bool force = false)
     {
         if (animationDriver == null)
@@ -917,7 +955,7 @@ public class CSHEnemy : NetworkBehaviour
                     ragdoll.ResetRagdollVelocity();
                 }
 
-                TriggerKillAnimation(knockbackable, knockbackDirection, killedVisual);
+                TriggerKillAnimation(knockbackable, ragdoll, knockbackDirection, killedVisual);
             }
             else
             {
@@ -928,7 +966,7 @@ public class CSHEnemy : NetworkBehaviour
         {
             ragdoll.Kill();
             ragdoll.ResetRagdollVelocity();
-            TriggerKillAnimation(knockbackable, knockbackDirection, killedVisual);
+            TriggerKillAnimation(knockbackable, ragdoll, knockbackDirection, killedVisual);
         }
         else
         {

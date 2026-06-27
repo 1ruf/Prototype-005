@@ -366,6 +366,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 911735132737398632}
+  - component: {fileID: 872300000000000001}
   - component: {fileID: 6213129680396904484}
   - component: {fileID: 2521670012594602900}
   - component: {fileID: 5759194197070490}
@@ -399,6 +400,22 @@ Transform:
   - {fileID: 872280000000000001}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &872300000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 500897660906067193}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d63a17289f1f4d939b865a679c886421, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ownerOverride: {fileID: 500897660906067193}
+  initializeOnAwake: 1
+  autoCollectComponents: 1
+  componentBehaviours: []
 --- !u!143 &6213129680396904484
 CharacterController:
   m_ObjectHideFlags: 0
@@ -549,6 +566,7 @@ GameObject:
   - component: {fileID: 872240000000000001}
   - component: {fileID: 872240000000000002}
   - component: {fileID: 872240000000000003}
+  - component: {fileID: 872320000000000001}
   m_Layer: 0
   m_Name: PlayerEntityComponents
   m_TagString: Untagged
@@ -610,6 +628,8 @@ MonoBehaviour:
   autoDisableNonRagdollBehaviours: 1
   hideNonVisualRenderersOnDeath: 1
   deadCamera: {fileID: 872290000000000001}
+  bloodSplatter: {fileID: 872320000000000001}
+  bloodSplatterCountOnDeath: 14
   _IsDead:
     _value: 0
   _IsRagdollEnabled:
@@ -662,6 +682,37 @@ MonoBehaviour:
   health: {fileID: 872240000000000001}
   playerMovement: {fileID: 2521670012594602900}
   killKey: 102
+--- !u!114 &872320000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 872270000000000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2f80184df544d22a2466f9bbfe59df9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bloodPrefabs:
+  - {fileID: 6809813831005347456, guid: c765d2fb84a0ba8479b365876d234c2b, type: 3}
+  - {fileID: 810362420023770092, guid: db551016b5d28b34ebb0612b28c4d3e6, type: 3}
+  - {fileID: 6129137592382015811, guid: 2d1167a6a8c9f914daa23c837ecd1fac, type: 3}
+  - {fileID: 1932777093267889105, guid: d730bb9d80664314a8658cf68fc3c054, type: 3}
+  prefabNormalAxis: 0
+  surfaceMask:
+    serializedVersion: 2
+    m_Bits: 384
+  floorProbeHeight: 1.1
+  floorProbeDistance: 3
+  wallProbeDistance: 2.2
+  surfaceOffset: 0.01
+  floorSizeRange: {x: 0.03, y: 0.2}
+  wallSizeRange: {x: 0.12, y: 0.42}
+  defaultCount: 3
+  scatterRadius: 1.7
+  wallChanceWhenNearWall: 0.5
+  maxDecals: 80
 --- !u!1 &872280000000000000
 GameObject:
   m_ObjectHideFlags: 0
@@ -3249,7 +3300,7 @@ Transform:
   m_GameObject: {fileID: 8317349177731908226}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.00000016391277, y: 0.36199987, z: 0.42599925}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3286,11 +3337,11 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.2
-  far clip plane: 1000
-  field of view: 58.715508
+  near clip plane: 0.1
+  far clip plane: 5000
+  field of view: 60
   orthographic: 0
-  orthographic size: 5
+  orthographic size: 10
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2

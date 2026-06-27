@@ -2,7 +2,7 @@ using Fusion;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class NetworkPlayerItemHolder : NetworkBehaviour
+public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
 {
     [SerializeField] private NetworkHeldItem startingItemPrefab;
     [SerializeField] private Transform firstPersonAnchor;
@@ -22,8 +22,10 @@ public class NetworkPlayerItemHolder : NetworkBehaviour
     private bool lastVisible;
     private bool lastActive;
     private bool thirdPersonPresentationSuppressed;
+    private GameObject owner;
 
     private bool IsLocalPlayer => Object == null || Object.HasInputAuthority;
+    public GameObject Owner => owner != null ? owner : gameObject;
     public bool IsLocalPlayerForPresentation => IsLocalPlayer;
     public bool IsHoldingItemForVisualPose => GetHeldItemVisible();
     public bool IsHeldItemActiveForVisualPose => GetHeldItemActive();
@@ -31,6 +33,12 @@ public class NetworkPlayerItemHolder : NetworkBehaviour
 
     private void Awake()
     {
+        Initialize(ResolveOwnerGameObject());
+    }
+
+    public void Initialize(GameObject entityOwner)
+    {
+        owner = entityOwner != null ? entityOwner : gameObject;
         ResolveReferences();
         EnsureItemInstance();
     }
@@ -253,7 +261,13 @@ public class NetworkPlayerItemHolder : NetworkBehaviour
 
     private Transform GetOwnerTransform()
     {
-        return playerMovement != null ? playerMovement.transform : transform;
+        return Owner != null ? Owner.transform : playerMovement != null ? playerMovement.transform : transform;
+    }
+
+    private GameObject ResolveOwnerGameObject()
+    {
+        PlayerMovement movement = playerMovement != null ? playerMovement : GetComponent<PlayerMovement>() ?? GetComponentInParent<PlayerMovement>();
+        return movement != null ? movement.gameObject : gameObject;
     }
 
     private bool GetHeldItemVisible()

@@ -2,7 +2,7 @@ using Fusion;
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
-public class PlayerMovement : NetworkBehaviour
+public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
 {
     [SerializeField] private float _speed;
     [SerializeField] private float _sprintMultiply;
@@ -36,6 +36,7 @@ public class PlayerMovement : NetworkBehaviour
     private bool _localPresentationConfigured;
     private string _lastVisualStateName;
     private float _lastVisualAnimatorSpeed = -1f;
+    private GameObject owner;
 
     private const string IdleStateName = "Base Layer.Idle";
     private const string RunStateName = "Base Layer.Run";
@@ -48,9 +49,17 @@ public class PlayerMovement : NetworkBehaviour
     [Networked] public float VisualAnimationSpeed { get; set; }
 
     public bool IsLocalNetworkPlayer => Object == null || Object.HasInputAuthority;
+    public GameObject Owner => owner != null ? owner : gameObject;
+
+    public void Initialize(GameObject entityOwner)
+    {
+        owner = entityOwner != null ? entityOwner : gameObject;
+    }
 
     private void Awake()
     {
+        Initialize(gameObject);
+
         if (_controller == null)
             _controller = GetComponent<CharacterController>();
 
@@ -60,6 +69,8 @@ public class PlayerMovement : NetworkBehaviour
 
     private void OnEnable()
     {
+        PlayerRuntimeRegistry.Register(this);
+
         if (_camAnimator != null)
             _camAnimator.Play("Walk");
 
@@ -84,6 +95,8 @@ public class PlayerMovement : NetworkBehaviour
 
     private void OnDisable()
     {
+        PlayerRuntimeRegistry.Unregister(this);
+
         if (Object != null && Object.HasInputAuthority && Manager.Instance != null)
             Manager.Instance.ClearLocalPlayer(this);
     }

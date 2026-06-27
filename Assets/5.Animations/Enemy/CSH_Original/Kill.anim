@@ -2630,12 +2630,40 @@ AnimationClip:
     floatParameter: 0
     intParameter: 0
     messageOptions: 0
+  - time: 0.23333333
+    functionName: AnimationEvent_SpawnKillBloodSplatter
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 1
+    messageOptions: 0
+  - time: 0.3
+    functionName: AnimationEvent_SpawnKillBloodSplatter
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 1
+    messageOptions: 0
+  - time: 6.866667
+    functionName: SpawnKillBloodSplatterAnimationEvent
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 3
+    messageOptions: 0
   - time: 7.983333
     functionName: ApplyKillKnockbackAnimationEvent
     data: 
     objectReferenceParameter: {fileID: 0}
     floatParameter: 0
     intParameter: 0
+    messageOptions: 0
+  - time: 7.983333
+    functionName: AnimationEvent_SpawnKillBloodSplatter
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 0
+    intParameter: 1
     messageOptions: 0
   - time: 10.166667
     functionName: StopAudioEvent

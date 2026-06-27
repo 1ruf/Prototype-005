@@ -1,25 +1,40 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class HorrorSystemManager : MonoBehaviour
 {
     public static HorrorSystemManager Instance;
 
-    public bool IsChasing { get; private set; }
-
+    public HorrorSystemController Controller { get; private set; }
+    public bool IsChasing => Controller != null && Controller.IsChasing;
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(this);
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        Controller = GameManager.RegisterController(new HorrorSystemController());
     }
 
     public void SetChase(bool value)
     {
-        IsChasing = value;
+        Controller?.SetChase(value);
     }
 
     public void JumpScare()
     {
-        print("¿ö!");
+        Controller?.JumpScare();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance != this)
+            return;
+
+        GameManager.UnregisterController<HorrorSystemController>();
+        Instance = null;
     }
 }

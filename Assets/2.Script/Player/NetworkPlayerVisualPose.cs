@@ -3,7 +3,7 @@ using UnityEngine;
 
 [DefaultExecutionOrder(11000)]
 [DisallowMultipleComponent]
-public class NetworkPlayerVisualPose : MonoBehaviour
+public class NetworkPlayerVisualPose : MonoBehaviour, INetworkEntityComponent
 {
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private NetworkPlayerItemHolder itemHolder;
@@ -40,10 +40,19 @@ public class NetworkPlayerVisualPose : MonoBehaviour
     private Quaternion headBaseLocalRotation = Quaternion.identity;
     private bool shoulderPivotOffsetCached;
     private Vector3 shoulderPivotLocalOffset;
+    private GameObject owner;
+
+    public GameObject Owner => owner != null ? owner : gameObject;
+
+    public void Initialize(GameObject entityOwner)
+    {
+        owner = entityOwner != null ? entityOwner : gameObject;
+        ResolveReferences();
+    }
 
     private void Awake()
     {
-        ResolveReferences();
+        Initialize(ResolveOwnerGameObject());
     }
 
     private void LateUpdate()
@@ -203,7 +212,13 @@ public class NetworkPlayerVisualPose : MonoBehaviour
 
     private Transform GetOwnerTransform()
     {
-        return playerMovement != null ? playerMovement.transform : transform;
+        return Owner != null ? Owner.transform : playerMovement != null ? playerMovement.transform : transform;
+    }
+
+    private GameObject ResolveOwnerGameObject()
+    {
+        PlayerMovement movement = playerMovement != null ? playerMovement : GetComponent<PlayerMovement>() ?? GetComponentInParent<PlayerMovement>();
+        return movement != null ? movement.gameObject : gameObject;
     }
 
     private Transform ResolveBone(HumanBodyBones humanBone, params string[] names)

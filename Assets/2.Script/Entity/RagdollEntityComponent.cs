@@ -17,11 +17,15 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
     [SerializeField] private bool autoDisableNonRagdollBehaviours = true;
     [SerializeField] private bool hideNonVisualRenderersOnDeath = true;
     [SerializeField] private DeadCameraController deadCamera;
+    [SerializeField] private BloodSplatterComponent bloodSplatter;
+    [SerializeField] private int bloodSplatterCountOnDeath = 14;
 
     [Networked] public NetworkBool IsDead { get; private set; }
     [Networked] public NetworkBool IsRagdollEnabled { get; private set; }
     [Networked] private Vector3 KnockbackImpulse { get; set; }
     [Networked] private int KnockbackSequence { get; set; }
+    [Networked] private int BloodSplatterSequence { get; set; }
+    [Networked] private int BloodSplatterCount { get; set; }
     [Networked] private int SyncedRagdollPartCount { get; set; }
     [Networked, Capacity(MaxSyncedRagdollParts)] private NetworkArray<Vector3> SyncedRagdollPartPositions => default;
     [Networked, Capacity(MaxSyncedRagdollParts)] private NetworkArray<Quaternion> SyncedRagdollPartRotations => default;
@@ -34,6 +38,8 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
     private Transform visualRoot;
     private UnityEngine.Behaviour[] autoDisableOnDeath;
     private Renderer[] nonVisualRenderers;
+    private bool bloodSplatterSpawnedForDeath;
+    private int lastAppliedBloodSplatterSequence;
 
     public GameObject Owner => owner != null ? owner : gameObject;
 
@@ -55,6 +61,7 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
             ApplyState(IsDead, IsRagdollEnabled, true);
 
         ApplyNetworkedKnockbackIfNeeded();
+        ApplyNetworkedBloodSplatterIfNeeded();
         ApplyNetworkedRagdollPoseIfNeeded(Time.deltaTime);
     }
 
@@ -134,6 +141,20 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
         }
     }
 
+    public void RequestBloodSplatter(int count)
+    {
+        if (count <= 0)
+            return;
+
+        if (Object == null || Object.HasStateAuthority)
+        {
+            PublishBloodSplatterEvent(count);
+            return;
+        }
+
+        RPC_RequestBloodSplatter(count);
+    }
+
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     private void RPC_RequestDeath()
     {
@@ -152,11 +173,20 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
         ApplyKnockbackInternal(direction, force, upwardForce);
     }
 
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void RPC_RequestBloodSplatter(int count)
+    {
+        PublishBloodSplatterEvent(count);
+    }
+
     private void SetDeadState(bool dead, bool ragdollEnabled)
     {
         IsDead = dead;
         IsRagdollEnabled = ragdollEnabled;
         ApplyState(dead, ragdollEnabled, true);
+
+        if (dead && ragdollEnabled)
+            PublishBloodSplatter(bloodSplatterCountOnDeath);
     }
 
     private void ApplyState(bool dead, bool ragdollEnabled, bool applyPresentation)
@@ -203,6 +233,11 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
 
             if (deadCamera != null)
                 deadCamera.SetDeadCameraActive(dead && ragdollEnabled);
+
+            if (!dead)
+            {
+                bloodSplatterSpawnedForDeath = false;
+            }
         }
 
         if (characterController != null)
@@ -231,8 +266,32 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
 
         KnockbackImpulse = impulse;
         KnockbackSequence++;
+        PublishBloodSplatter(bloodSplatterCountOnDeath);
         ApplyImpulseToParts(impulse);
         lastAppliedKnockbackSequence = KnockbackSequence;
+    }
+
+    private void PublishBloodSplatter(int count)
+    {
+        if (count <= 0 || bloodSplatterSpawnedForDeath)
+            return;
+
+        BloodSplatterCount = count;
+        BloodSplatterSequence++;
+        bloodSplatterSpawnedForDeath = true;
+        ApplyBloodSplatter(BloodSplatterCount);
+        lastAppliedBloodSplatterSequence = BloodSplatterSequence;
+    }
+
+    private void PublishBloodSplatterEvent(int count)
+    {
+        if (count <= 0)
+            return;
+
+        BloodSplatterCount = count;
+        BloodSplatterSequence++;
+        ApplyBloodSplatter(BloodSplatterCount);
+        lastAppliedBloodSplatterSequence = BloodSplatterSequence;
     }
 
     private void ApplyNetworkedKnockbackIfNeeded()
@@ -248,6 +307,24 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
 
         ApplyImpulseToParts(KnockbackImpulse);
         lastAppliedKnockbackSequence = KnockbackSequence;
+    }
+
+    private void ApplyNetworkedBloodSplatterIfNeeded()
+    {
+        if (BloodSplatterSequence == 0 || lastAppliedBloodSplatterSequence == BloodSplatterSequence)
+            return;
+
+        ApplyBloodSplatter(BloodSplatterCount);
+        lastAppliedBloodSplatterSequence = BloodSplatterSequence;
+    }
+
+    private void ApplyBloodSplatter(int count)
+    {
+        if (count <= 0)
+            return;
+
+        EnsureReferences();
+        bloodSplatter?.SpawnBlood(count, Owner.transform.position, KnockbackImpulse);
     }
 
     private void CaptureNetworkedRagdollPose()
@@ -365,6 +442,9 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
         if (deadCamera == null)
             deadCamera = root.GetComponentInChildren<DeadCameraController>(true);
 
+        if (bloodSplatter == null)
+            bloodSplatter = root.GetComponentInChildren<BloodSplatterComponent>(true);
+
         if (autoDisableOnDeath == null || autoDisableOnDeath.Length == 0)
             autoDisableOnDeath = CreateAutoDisableBehaviourList(root);
 
@@ -395,6 +475,7 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
             || behaviour is RagdollPartComponent
             || behaviour is NetworkHealthComponent
             || behaviour is NetworkDeathComponent
+            || behaviour is BloodSplatterComponent
             || behaviour is DeadCameraController
             || IsVisualMainCameraBehaviour(behaviour);
     }

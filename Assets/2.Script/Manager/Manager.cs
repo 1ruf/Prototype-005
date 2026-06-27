@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class Manager : MonoBehaviour
 {
@@ -11,8 +10,13 @@ public class Manager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(this);
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
     }
 
     public void RegisterLocalPlayer(PlayerMovement player)
@@ -34,5 +38,13 @@ public class Manager : MonoBehaviour
 
         if (ScreenManager != null)
             ScreenManager.ClearLocalPlayer(player);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance != this)
+            return;
+
+        Instance = null;
     }
 }
