@@ -19,12 +19,12 @@ public class NetworkHealthComponent : NetworkBehaviour, INetworkEntityComponent
 
     private void Awake()
     {
-        Initialize(gameObject);
+        Initialize(ResolveOwner());
     }
 
     public override void Spawned()
     {
-        Initialize(gameObject);
+        Initialize(ResolveOwner());
 
         if (Object.HasStateAuthority && CurrentHealth <= 0f && !IsDead)
             CurrentHealth = maxHealth;
@@ -40,6 +40,12 @@ public class NetworkHealthComponent : NetworkBehaviour, INetworkEntityComponent
     public void Initialize(GameObject entityOwner)
     {
         owner = entityOwner;
+    }
+
+    private GameObject ResolveOwner()
+    {
+        PlayerMovement player = GetComponentInParent<PlayerMovement>();
+        return player != null ? player.gameObject : gameObject;
     }
 
     public void Damage(float amount)

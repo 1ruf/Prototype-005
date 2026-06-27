@@ -7,6 +7,14 @@ using UnityEngine.SceneManagement;
 
 public class NetworkGameManager : MonoBehaviour, INetworkRunnerCallbacks
 {
+    private enum EnemySpawnDifficulty
+    {
+        Easy = 0,
+        Normal = 1,
+        Hard = 2,
+        Hardcore = 3
+    }
+
     public static NetworkGameManager Instance { get; private set; }
 
     [SerializeField] private NetworkObject playerPrefab;
@@ -14,7 +22,7 @@ public class NetworkGameManager : MonoBehaviour, INetworkRunnerCallbacks
     [SerializeField] private List<Transform> playerSpawnPoints = new List<Transform>();
     [SerializeField] private List<Transform> enemySpawnPoints = new List<Transform>();
     [SerializeField] private string sessionName = "Prototype005";
-    [SerializeField] private float enemyCountPerPlayer = 1.5f;
+    [SerializeField] private EnemySpawnDifficulty enemySpawnDifficulty = EnemySpawnDifficulty.Hard;
 
     private readonly Dictionary<PlayerRef, NetworkObject> spawnedPlayers = new Dictionary<PlayerRef, NetworkObject>();
     private readonly List<NetworkObject> spawnedEnemies = new List<NetworkObject>();
@@ -153,7 +161,7 @@ public class NetworkGameManager : MonoBehaviour, INetworkRunnerCallbacks
 
         spawnedEnemies.RemoveAll(enemy => enemy == null);
 
-        int targetEnemyCount = Mathf.CeilToInt(spawnedPlayers.Count * enemyCountPerPlayer);
+        int targetEnemyCount = GetTargetEnemyCount(spawnedPlayers.Count);
         while (spawnedEnemies.Count < targetEnemyCount)
         {
             Transform spawnPoint = GetRandomEnemySpawnPoint();
@@ -171,6 +179,21 @@ public class NetworkGameManager : MonoBehaviour, INetworkRunnerCallbacks
             if (enemy != null)
                 runner.Despawn(enemy);
         }
+    }
+
+    private int GetTargetEnemyCount(int playerCount)
+    {
+        if (playerCount <= 0)
+            return 0;
+
+        return enemySpawnDifficulty switch
+        {
+            EnemySpawnDifficulty.Hardcore => playerCount * 2,
+            EnemySpawnDifficulty.Hard => Mathf.CeilToInt(playerCount * 1.5f),
+            EnemySpawnDifficulty.Normal => playerCount,
+            EnemySpawnDifficulty.Easy => Mathf.Max(1, Mathf.CeilToInt(playerCount * 0.5f)),
+            _ => Mathf.CeilToInt(playerCount * 1.5f)
+        };
     }
 
     private Transform GetRandomEnemySpawnPoint()

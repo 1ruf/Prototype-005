@@ -14,6 +14,9 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
     [SerializeField] private UnityEngine.Behaviour[] disableOnDeath;
     [SerializeField] private NetworkPlayerVisualPose[] visualPoseDrivers;
     [SerializeField] private Renderer[] visualRenderers;
+    [SerializeField] private bool autoDisableNonRagdollBehaviours = true;
+    [SerializeField] private bool hideNonVisualRenderersOnDeath = true;
+    [SerializeField] private DeadCameraController deadCamera;
 
     [Networked] public NetworkBool IsDead { get; private set; }
     [Networked] public NetworkBool IsRagdollEnabled { get; private set; }
@@ -28,18 +31,21 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
     private bool lastDeadState;
     private bool lastRagdollState;
     private int lastAppliedKnockbackSequence;
+    private Transform visualRoot;
+    private UnityEngine.Behaviour[] autoDisableOnDeath;
+    private Renderer[] nonVisualRenderers;
 
     public GameObject Owner => owner != null ? owner : gameObject;
 
     private void Awake()
     {
-        Initialize(gameObject);
+        Initialize(ResolveOwner());
         ApplyState(false, false, true);
     }
 
     public override void Spawned()
     {
-        Initialize(gameObject);
+        Initialize(ResolveOwner());
         ApplyState(IsDead, IsRagdollEnabled, true);
     }
 
@@ -113,6 +119,21 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
         RPC_RequestKnockback(direction, force, upwardForce);
     }
 
+    public void ResetRagdollVelocity()
+    {
+        EnsureReferences();
+
+        foreach (RagdollPartComponent part in parts)
+        {
+            Rigidbody body = part != null ? part.Rigidbody : null;
+            if (body == null || body.isKinematic)
+                continue;
+
+            body.linearVelocity = Vector3.zero;
+            body.angularVelocity = Vector3.zero;
+        }
+    }
+
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     private void RPC_RequestDeath()
     {
@@ -151,7 +172,10 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
         if (applyPresentation)
         {
             if (dead && ragdollEnabled)
+            {
+                SetVisualActive(true);
                 SetVisualRenderersVisible(true);
+            }
 
             foreach (Animator animator in animators)
             {
@@ -170,6 +194,15 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
                 if (visualPoseDriver != null)
                     visualPoseDriver.enabled = !dead;
             }
+
+            if (autoDisableNonRagdollBehaviours)
+                SetAutoDisableBehavioursEnabled(!dead);
+
+            if (hideNonVisualRenderersOnDeath)
+                SetNonVisualRenderersVisible(!dead);
+
+            if (deadCamera != null)
+                deadCamera.SetDeadCameraActive(dead && ragdollEnabled);
         }
 
         if (characterController != null)
@@ -292,36 +325,143 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
 
     private void EnsureReferences()
     {
+        GameObject root = ResolveOwner();
+
         if (parts == null || parts.Length == 0)
-            parts = GetComponentsInChildren<RagdollPartComponent>(true);
+            parts = root.GetComponentsInChildren<RagdollPartComponent>(true);
 
         if (parts == null || parts.Length == 0)
             parts = CreateMissingPartComponents();
 
         if (animators == null || animators.Length == 0)
-            animators = GetComponentsInChildren<Animator>(true);
+            animators = root.GetComponentsInChildren<Animator>(true);
 
         if (characterController == null)
-            characterController = GetComponent<CharacterController>();
+            characterController = root.GetComponent<CharacterController>();
 
         if (networkController == null)
-            networkController = GetComponent<NetworkCharacterController>();
+            networkController = root.GetComponent<NetworkCharacterController>();
 
         if (disableOnDeath == null || disableOnDeath.Length == 0)
             disableOnDeath = new UnityEngine.Behaviour[]
             {
-                GetComponent<PlayerMovement>(),
-                GetComponentInChildren<MouseLookSystem>(true),
-                GetComponentInChildren<CameraBobbingController>(true)
+                root.GetComponent<PlayerMovement>(),
+                root.GetComponentInChildren<MouseLookSystem>(true),
+                root.GetComponentInChildren<CameraBobbingController>(true)
             };
 
         if (visualPoseDrivers == null || visualPoseDrivers.Length == 0)
-            visualPoseDrivers = GetComponentsInChildren<NetworkPlayerVisualPose>(true);
+            visualPoseDrivers = root.GetComponentsInChildren<NetworkPlayerVisualPose>(true);
 
         if (visualRenderers == null || visualRenderers.Length == 0)
         {
-            Transform visual = FindChildByName(transform, "Visual");
-            visualRenderers = visual != null ? visual.GetComponentsInChildren<Renderer>(true) : GetComponentsInChildren<Renderer>(true);
+            visualRoot = FindChildByName(root.transform, "Visual");
+            visualRenderers = visualRoot != null ? visualRoot.GetComponentsInChildren<Renderer>(true) : root.GetComponentsInChildren<Renderer>(true);
+        }
+
+        if (visualRoot == null)
+            visualRoot = FindChildByName(root.transform, "Visual");
+
+        if (deadCamera == null)
+            deadCamera = root.GetComponentInChildren<DeadCameraController>(true);
+
+        if (autoDisableOnDeath == null || autoDisableOnDeath.Length == 0)
+            autoDisableOnDeath = CreateAutoDisableBehaviourList(root);
+
+        if (nonVisualRenderers == null || nonVisualRenderers.Length == 0)
+            nonVisualRenderers = CreateNonVisualRendererList(root);
+    }
+
+    private UnityEngine.Behaviour[] CreateAutoDisableBehaviourList(GameObject root)
+    {
+        UnityEngine.Behaviour[] behaviours = root.GetComponentsInChildren<UnityEngine.Behaviour>(true);
+        var filtered = new System.Collections.Generic.List<UnityEngine.Behaviour>(behaviours.Length);
+
+        foreach (UnityEngine.Behaviour behaviour in behaviours)
+        {
+            if (behaviour == null || IsProtectedDeathBehaviour(behaviour))
+                continue;
+
+            filtered.Add(behaviour);
+        }
+
+        return filtered.ToArray();
+    }
+
+    private bool IsProtectedDeathBehaviour(UnityEngine.Behaviour behaviour)
+    {
+        return behaviour == this
+            || behaviour is RagdollEntityComponent
+            || behaviour is RagdollPartComponent
+            || behaviour is NetworkHealthComponent
+            || behaviour is NetworkDeathComponent
+            || behaviour is DeadCameraController
+            || IsVisualMainCameraBehaviour(behaviour);
+    }
+
+    private bool IsVisualMainCameraBehaviour(UnityEngine.Behaviour behaviour)
+    {
+        if (behaviour == null || behaviour.transform == null)
+            return false;
+
+        if (!IsUnderVisualRoot(behaviour.transform))
+            return false;
+
+        return behaviour.GetComponent<Camera>() != null && behaviour.gameObject.name == "Main Camera";
+    }
+
+    private Renderer[] CreateNonVisualRendererList(GameObject root)
+    {
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        var filtered = new System.Collections.Generic.List<Renderer>(renderers.Length);
+
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer == null || IsUnderVisualRoot(renderer.transform))
+                continue;
+
+            filtered.Add(renderer);
+        }
+
+        return filtered.ToArray();
+    }
+
+    private bool IsUnderVisualRoot(Transform candidate)
+    {
+        return visualRoot != null && candidate != null && (candidate == visualRoot || candidate.IsChildOf(visualRoot));
+    }
+
+    private void SetVisualActive(bool active)
+    {
+        if (visualRoot != null && visualRoot.gameObject.activeSelf != active)
+            visualRoot.gameObject.SetActive(active);
+    }
+
+    private void SetAutoDisableBehavioursEnabled(bool enabled)
+    {
+        EnsureReferences();
+
+        if (autoDisableOnDeath == null)
+            return;
+
+        foreach (UnityEngine.Behaviour behaviour in autoDisableOnDeath)
+        {
+            if (behaviour != null)
+                behaviour.enabled = enabled;
+        }
+    }
+
+    private void SetNonVisualRenderersVisible(bool visible)
+    {
+        EnsureReferences();
+
+        if (nonVisualRenderers == null)
+            return;
+
+        foreach (Renderer nonVisualRenderer in nonVisualRenderers)
+        {
+            if (nonVisualRenderer != null)
+                nonVisualRenderer.enabled = visible;
         }
     }
 
@@ -356,7 +496,7 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
 
     private RagdollPartComponent[] CreateMissingPartComponents()
     {
-        Rigidbody[] rigidbodies = GetComponentsInChildren<Rigidbody>(true);
+        Rigidbody[] rigidbodies = ResolveOwner().GetComponentsInChildren<Rigidbody>(true);
         var createdParts = new System.Collections.Generic.List<RagdollPartComponent>(rigidbodies.Length);
 
         foreach (Rigidbody body in rigidbodies)
@@ -373,5 +513,14 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
         }
 
         return createdParts.ToArray();
+    }
+
+    private GameObject ResolveOwner()
+    {
+        if (owner != null)
+            return owner;
+
+        PlayerMovement player = GetComponentInParent<PlayerMovement>();
+        return player != null ? player.gameObject : gameObject;
     }
 }

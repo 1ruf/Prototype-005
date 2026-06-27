@@ -129,7 +129,7 @@ public class NetworkPlayerItemHolder : NetworkBehaviour
 
         Transform anchor = IsLocalPlayer ? firstPersonAnchor : thirdPersonAnchor;
         if (anchor == null)
-            anchor = transform;
+            anchor = GetOwnerTransform();
 
         itemInstance.transform.SetParent(anchor, false);
         itemInstance.SetFirstPerson(IsLocalPlayer);
@@ -166,7 +166,7 @@ public class NetworkPlayerItemHolder : NetworkBehaviour
 
     public Quaternion GetViewRotation()
     {
-        return transform.rotation * Quaternion.Euler(GetLookPitch(), 0f, 0f);
+        return GetOwnerTransform().rotation * Quaternion.Euler(GetLookPitch(), 0f, 0f);
     }
 
     public bool TryGetHeldItemWorldPose(out Vector3 position, out Quaternion rotation)
@@ -219,7 +219,7 @@ public class NetworkPlayerItemHolder : NetworkBehaviour
         if (itemInstance != null)
             return;
 
-        NetworkHeldItem existingItem = GetComponentInChildren<NetworkHeldItem>(true);
+        NetworkHeldItem existingItem = GetOwnerTransform().GetComponentInChildren<NetworkHeldItem>(true);
         if (existingItem != null && existingItem.gameObject != gameObject)
         {
             itemInstance = existingItem;
@@ -238,17 +238,22 @@ public class NetworkPlayerItemHolder : NetworkBehaviour
     private void ResolveReferences()
     {
         if (playerMovement == null)
-            playerMovement = GetComponent<PlayerMovement>();
+            playerMovement = GetComponent<PlayerMovement>() ?? GetComponentInParent<PlayerMovement>();
 
         if (firstPersonAnchor == null)
         {
-            Camera camera = GetComponentInChildren<Camera>(true);
+            Camera camera = GetOwnerTransform().GetComponentInChildren<Camera>(true);
             if (camera != null)
                 firstPersonAnchor = camera.transform;
         }
 
         if (thirdPersonAnchor == null)
-            thirdPersonAnchor = transform;
+            thirdPersonAnchor = GetOwnerTransform();
+    }
+
+    private Transform GetOwnerTransform()
+    {
+        return playerMovement != null ? playerMovement.transform : transform;
     }
 
     private bool GetHeldItemVisible()

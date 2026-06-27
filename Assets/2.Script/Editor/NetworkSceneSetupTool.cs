@@ -3,6 +3,7 @@ using Fusion;
 using Fusion.Editor;
 using UnityEditor;
 using UnityEditor.Callbacks;
+using UnityEditorInternal;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -84,6 +85,7 @@ public static class NetworkSceneSetupTool
         GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
         if (playerPrefab == null ||
             MissingPlayerAnimationSetup(playerPrefab) ||
+            MissingPlayerComponentOrganization(playerPrefab) ||
             !HasComponentByTypeName(playerPrefab, "CameraShakeController") ||
             playerPrefab.GetComponentInChildren<NetworkHealthComponent>(true) == null ||
             playerPrefab.GetComponentInChildren<NetworkDeathComponent>(true) == null ||
@@ -171,6 +173,7 @@ public static class NetworkSceneSetupTool
 
         EnsureComponent<NetworkObject>(clone);
         EnsureComponent<NetworkCharacterController>(clone);
+        EnsurePlayerComponentOrganization(clone);
         EnsurePlayerAnimationSetup(clone);
         EnsureCameraShakeSetup(clone);
         EnsureNetworkEntitySetup(clone);
@@ -339,7 +342,7 @@ public static class NetworkSceneSetupTool
 
     private static void EnsureRagdollSetup(GameObject player)
     {
-        RagdollEntityComponent ragdoll = EnsureComponent<RagdollEntityComponent>(player);
+        RagdollEntityComponent ragdoll = EnsurePlayerSupportComponent<RagdollEntityComponent>(player, "PlayerEntityComponents");
 
         Rigidbody[] rigidbodies = player.GetComponentsInChildren<Rigidbody>(true);
         var parts = new System.Collections.Generic.List<RagdollPartComponent>(rigidbodies.Length);
@@ -379,10 +382,10 @@ public static class NetworkSceneSetupTool
 
     private static void EnsureNetworkEntitySetup(GameObject player)
     {
-        NetworkHealthComponent health = EnsureComponent<NetworkHealthComponent>(player);
-        RagdollEntityComponent ragdoll = EnsureComponent<RagdollEntityComponent>(player);
-        NetworkDeathComponent death = EnsureComponent<NetworkDeathComponent>(player);
-        PlayerDebugDeathInput debugDeathInput = EnsureComponent<PlayerDebugDeathInput>(player);
+        NetworkHealthComponent health = EnsurePlayerSupportComponent<NetworkHealthComponent>(player, "PlayerEntityComponents");
+        RagdollEntityComponent ragdoll = EnsurePlayerSupportComponent<RagdollEntityComponent>(player, "PlayerEntityComponents");
+        NetworkDeathComponent death = EnsurePlayerSupportComponent<NetworkDeathComponent>(player, "PlayerEntityComponents");
+        PlayerDebugDeathInput debugDeathInput = EnsurePlayerSupportComponent<PlayerDebugDeathInput>(player, "PlayerEntityComponents");
 
         SerializedObject serializedDeath = new SerializedObject(death);
         serializedDeath.FindProperty("health").objectReferenceValue = health;
@@ -397,6 +400,51 @@ public static class NetworkSceneSetupTool
 
         health.Initialize(player);
         death.Initialize(player);
+    }
+
+    private static void EnsurePlayerComponentOrganization(GameObject player)
+    {
+        EnsurePlayerSupportComponent<NetworkHealthComponent>(player, "PlayerEntityComponents");
+        EnsurePlayerSupportComponent<RagdollEntityComponent>(player, "PlayerEntityComponents");
+        EnsurePlayerSupportComponent<NetworkDeathComponent>(player, "PlayerEntityComponents");
+        EnsurePlayerSupportComponent<PlayerDebugDeathInput>(player, "PlayerEntityComponents");
+        EnsurePlayerSupportComponent<NetworkPlayerItemHolder>(player, "PlayerPresentationComponents");
+        EnsurePlayerSupportComponent<NetworkPlayerVisualPose>(player, "PlayerPresentationComponents");
+    }
+
+    private static T EnsurePlayerSupportComponent<T>(GameObject player, string childName) where T : Component
+    {
+        GameObject child = EnsureChild(player.transform, childName).gameObject;
+        T childComponent = child.GetComponent<T>();
+        T rootComponent = player.GetComponent<T>();
+
+        if (childComponent == null && rootComponent != null)
+        {
+            ComponentUtility.CopyComponent(rootComponent);
+            ComponentUtility.PasteComponentAsNew(child);
+            Object.DestroyImmediate(rootComponent);
+            childComponent = child.GetComponent<T>();
+        }
+
+        if (childComponent == null)
+            childComponent = child.AddComponent<T>();
+
+        return childComponent;
+    }
+
+    private static Transform EnsureChild(Transform parent, string childName)
+    {
+        Transform child = parent.Find(childName);
+        if (child == null)
+        {
+            child = new GameObject(childName).transform;
+            child.SetParent(parent, false);
+        }
+
+        child.localPosition = Vector3.zero;
+        child.localRotation = Quaternion.identity;
+        child.localScale = Vector3.one;
+        return child;
     }
 
     private static void SetObjectArray<T>(SerializedProperty property, System.Collections.Generic.IList<T> objects)
@@ -453,6 +501,16 @@ public static class NetworkSceneSetupTool
         }
 
         return false;
+    }
+
+    private static bool MissingPlayerComponentOrganization(GameObject playerPrefab)
+    {
+        return playerPrefab.GetComponent<NetworkHealthComponent>() != null ||
+               playerPrefab.GetComponent<RagdollEntityComponent>() != null ||
+               playerPrefab.GetComponent<NetworkDeathComponent>() != null ||
+               playerPrefab.GetComponent<PlayerDebugDeathInput>() != null ||
+               playerPrefab.GetComponent<NetworkPlayerItemHolder>() != null ||
+               playerPrefab.GetComponent<NetworkPlayerVisualPose>() != null;
     }
 
     private static bool MissingPlayerAnimationSetup(GameObject playerPrefab)

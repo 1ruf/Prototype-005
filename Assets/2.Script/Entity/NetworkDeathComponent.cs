@@ -17,7 +17,7 @@ public class NetworkDeathComponent : NetworkBehaviour, INetworkEntityComponent
 
     private void Awake()
     {
-        Initialize(gameObject);
+        Initialize(ResolveOwner());
     }
 
     private void OnEnable()
@@ -33,7 +33,7 @@ public class NetworkDeathComponent : NetworkBehaviour, INetworkEntityComponent
 
     public override void Spawned()
     {
-        Initialize(gameObject);
+        Initialize(ResolveOwner());
         SubscribeHealth();
         PublishDeathIfNeeded();
     }
@@ -48,22 +48,28 @@ public class NetworkDeathComponent : NetworkBehaviour, INetworkEntityComponent
         owner = entityOwner;
 
         if (health == null)
-            health = GetComponent<NetworkHealthComponent>();
+            health = GetComponent<NetworkHealthComponent>() ?? GetComponentInParent<NetworkHealthComponent>() ?? entityOwner.GetComponentInChildren<NetworkHealthComponent>(true);
 
         if (ragdoll == null)
-            ragdoll = GetComponent<RagdollEntityComponent>();
+            ragdoll = GetComponent<RagdollEntityComponent>() ?? GetComponentInParent<RagdollEntityComponent>() ?? entityOwner.GetComponentInChildren<RagdollEntityComponent>(true);
     }
 
     private void SubscribeHealth()
     {
         if (health == null)
-            health = GetComponent<NetworkHealthComponent>();
+            health = GetComponent<NetworkHealthComponent>() ?? GetComponentInParent<NetworkHealthComponent>() ?? ResolveOwner().GetComponentInChildren<NetworkHealthComponent>(true);
 
         if (health == null)
             return;
 
         health.Died -= HandleDeath;
         health.Died += HandleDeath;
+    }
+
+    private GameObject ResolveOwner()
+    {
+        PlayerMovement player = GetComponentInParent<PlayerMovement>();
+        return player != null ? player.gameObject : gameObject;
     }
 
     private void HandleDeath(NetworkHealthComponent deadHealth)

@@ -134,11 +134,11 @@ public class NetworkPlayerVisualPose : MonoBehaviour
         Vector3 pivotPosition = leftUpperArm.position;
         if (!shoulderPivotOffsetCached)
         {
-            shoulderPivotLocalOffset = Quaternion.Inverse(transform.rotation) * (heldPosition - pivotPosition);
+            shoulderPivotLocalOffset = Quaternion.Inverse(GetOwnerTransform().rotation) * (heldPosition - pivotPosition);
             shoulderPivotOffsetCached = true;
         }
 
-        Vector3 rotatedOffset = transform.rotation * (Quaternion.Euler(pitch, 0f, 0f) * shoulderPivotLocalOffset);
+        Vector3 rotatedOffset = GetOwnerTransform().rotation * (Quaternion.Euler(pitch, 0f, 0f) * shoulderPivotLocalOffset);
         heldPosition = pivotPosition + rotatedOffset;
         itemHolder.HeldItemTransform.position = heldPosition;
     }
@@ -158,13 +158,13 @@ public class NetworkPlayerVisualPose : MonoBehaviour
     private void ResolveReferences()
     {
         if (playerMovement == null)
-            playerMovement = GetComponent<PlayerMovement>();
+            playerMovement = GetComponent<PlayerMovement>() ?? GetComponentInParent<PlayerMovement>();
 
         if (itemHolder == null)
-            itemHolder = GetComponent<NetworkPlayerItemHolder>();
+            itemHolder = GetComponent<NetworkPlayerItemHolder>() ?? GetComponentInParent<NetworkPlayerItemHolder>() ?? GetOwnerTransform().GetComponentInChildren<NetworkPlayerItemHolder>(true);
 
         if (ragdoll == null)
-            ragdoll = GetComponent<RagdollEntityComponent>();
+            ragdoll = GetComponent<RagdollEntityComponent>() ?? GetComponentInParent<RagdollEntityComponent>() ?? GetOwnerTransform().GetComponentInChildren<RagdollEntityComponent>(true);
 
         if (visualAnimator == null)
             visualAnimator = ResolveVisualAnimator();
@@ -196,9 +196,14 @@ public class NetworkPlayerVisualPose : MonoBehaviour
 
     private Animator ResolveVisualAnimator()
     {
-        Transform visual = FindChildByName(transform, "Visual");
+        Transform visual = FindChildByName(GetOwnerTransform(), "Visual");
         Animator animator = visual != null ? visual.GetComponentInChildren<Animator>(true) : null;
-        return animator != null ? animator : GetComponentInChildren<Animator>(true);
+        return animator != null ? animator : GetOwnerTransform().GetComponentInChildren<Animator>(true);
+    }
+
+    private Transform GetOwnerTransform()
+    {
+        return playerMovement != null ? playerMovement.transform : transform;
     }
 
     private Transform ResolveBone(HumanBodyBones humanBone, params string[] names)

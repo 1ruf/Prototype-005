@@ -53,6 +53,9 @@ public class CSHEnemy : NetworkBehaviour
     [SerializeField] private float enemySeparationStrength = 5.5f;
     [SerializeField] private float enemySeparationMaxForce = 3.5f;
     [SerializeField] private float navMeshSnapDistance = 8f;
+    [SerializeField] private float attackDamage = 100f;
+    [SerializeField] private float attackAnimationDuration = 0.8f;
+    [SerializeField] private float killAnimationDuration = 10f;
     [SerializeField] private float killKnockbackForce = 12f;
     [SerializeField] private float killKnockbackUpwardForce = 3f;
 
@@ -68,11 +71,20 @@ public class CSHEnemy : NetworkBehaviour
     private IEnemyState patrolState;
     private IEnemyState chaseState;
     private bool networkSpawned;
+    private int renderedAttackSequence;
+    private int renderedKillSequence;
+    private IKnockbackable pendingKillKnockback;
+    private Vector3 pendingKillKnockbackDirection;
+    private float localKillAnimationEndTime;
 
     [Networked] private Vector3 NetworkPosition { get; set; }
     [Networked] private Quaternion NetworkRotation { get; set; }
     [Networked] private EnemyStateId NetworkState { get; set; }
     [Networked] private EnemyAnimationState NetworkAnimationState { get; set; }
+    [Networked] private TickTimer AttackAnimationTimer { get; set; }
+    [Networked] private TickTimer KillAnimationTimer { get; set; }
+    [Networked] private int NetworkAttackSequence { get; set; }
+    [Networked] private int NetworkKillSequence { get; set; }
 
     public int RealtimeEnemyId { get; private set; }
 
@@ -168,11 +180,23 @@ public class CSHEnemy : NetworkBehaviour
         else
             transform.rotation = Quaternion.Slerp(transform.rotation, NetworkRotation, Time.deltaTime * 12f);
 
-        ApplyAnimationState(NetworkAnimationState);
+        bool replayAttack = NetworkAnimationState == EnemyAnimationState.Attack && renderedAttackSequence != NetworkAttackSequence;
+        bool replayKill = NetworkAnimationState == EnemyAnimationState.Kill && renderedKillSequence != NetworkKillSequence;
+        ApplyAnimationState(NetworkAnimationState, replayAttack || replayKill);
+        renderedAttackSequence = NetworkAttackSequence;
+        renderedKillSequence = NetworkKillSequence;
     }
 
     private void TickState(float deltaTime)
     {
+        if (IsKillAnimationPlaying())
+        {
+            StopMoving();
+            return;
+        }
+
+        ClearExpiredKillAnimation();
+
         if (currentState == null)
             ChangeState(EnemyStateId.Patrol);
 
@@ -691,6 +715,12 @@ public class CSHEnemy : NetworkBehaviour
 
     private EnemyAnimationState ResolveAnimationState()
     {
+        if (IsKillAnimationPlaying())
+            return EnemyAnimationState.Kill;
+
+        if (IsAttackAnimationPlaying())
+            return EnemyAnimationState.Attack;
+
         if (currentState == null)
             return EnemyAnimationState.Idle;
 
@@ -724,20 +754,146 @@ public class CSHEnemy : NetworkBehaviour
         return velocity.sqrMagnitude > 0.01f;
     }
 
-    private void ApplyAnimationState(EnemyAnimationState stateId)
+    private bool IsAttackAnimationPlaying()
+    {
+        return Object != null
+            && networkSpawned
+            && AttackAnimationTimer.IsRunning
+            && !AttackAnimationTimer.Expired(Runner);
+    }
+
+    private bool IsKillAnimationPlaying()
+    {
+        if (Object == null)
+            return Time.time < localKillAnimationEndTime;
+
+        return Object != null
+            && networkSpawned
+            && KillAnimationTimer.IsRunning
+            && !KillAnimationTimer.Expired(Runner);
+    }
+
+    private void ClearExpiredKillAnimation()
+    {
+        if (Object == null || !Object.HasStateAuthority || !networkSpawned)
+            return;
+
+        if (!KillAnimationTimer.IsRunning || !KillAnimationTimer.Expired(Runner))
+            return;
+
+        KillAnimationTimer = TickTimer.None;
+        pendingKillKnockback = null;
+        localKillAnimationEndTime = 0f;
+    }
+
+    private void TriggerAttackAnimation()
+    {
+        if (Object != null && !Object.HasStateAuthority)
+            return;
+
+        if (Object != null && networkSpawned)
+        {
+            AttackAnimationTimer = TickTimer.CreateFromSeconds(Runner, attackAnimationDuration);
+            NetworkAttackSequence++;
+            NetworkAnimationState = EnemyAnimationState.Attack;
+            renderedAttackSequence = NetworkAttackSequence;
+        }
+
+        ApplyAnimationState(EnemyAnimationState.Attack, true);
+    }
+
+    private void TriggerKillAnimation(IKnockbackable knockbackable, Vector3 knockbackDirection, Transform killedVisual)
+    {
+        if (Object != null && !Object.HasStateAuthority)
+            return;
+
+        StopMoving();
+        RotateVisualTowardKillTarget(killedVisual);
+        pendingKillKnockback = knockbackable;
+        pendingKillKnockbackDirection = knockbackDirection.sqrMagnitude > 0.0001f ? knockbackDirection.normalized : transform.forward;
+        float killDuration = GetKillAnimationDuration();
+        localKillAnimationEndTime = Time.time + killDuration;
+
+        if (Object != null && networkSpawned)
+        {
+            KillAnimationTimer = TickTimer.CreateFromSeconds(Runner, killDuration);
+            AttackAnimationTimer = TickTimer.None;
+            NetworkKillSequence++;
+            NetworkAnimationState = EnemyAnimationState.Kill;
+            renderedKillSequence = NetworkKillSequence;
+        }
+
+        ApplyAnimationState(EnemyAnimationState.Kill, true);
+    }
+
+    private float GetKillAnimationDuration()
     {
         if (animationDriver == null)
             ResolveAnimationDriver();
 
-        animationDriver?.Play(stateId);
+        float fallback = Mathf.Max(0.1f, killAnimationDuration);
+        return animationDriver != null ? animationDriver.GetClipLength(EnemyAnimationState.Kill, fallback) : fallback;
+    }
+
+    private void RotateVisualTowardKillTarget(Transform killedVisual)
+    {
+        if (killedVisual == null)
+            return;
+
+        Transform rotatingTransform = visual != null ? visual : transform;
+        Vector3 direction = killedVisual.position - rotatingTransform.position;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude <= 0.0001f)
+            return;
+
+        Quaternion targetRotation = Quaternion.LookRotation(direction.normalized);
+        rotatingTransform.rotation = targetRotation;
+
+        if (Object != null && networkSpawned)
+            NetworkRotation = targetRotation;
+    }
+
+    public void ApplyKillKnockbackAnimationEvent()
+    {
+        if (Object != null && !Object.HasStateAuthority)
+            return;
+
+        if (pendingKillKnockback == null)
+            return;
+
+        pendingKillKnockback.ApplyKnockback(pendingKillKnockbackDirection, killKnockbackForce, killKnockbackUpwardForce);
+        pendingKillKnockback = null;
+    }
+
+    public void AnimationEvent_ApplyKillKnockback()
+    {
+        ApplyKillKnockbackAnimationEvent();
+    }
+
+    public void OnKillKnockback()
+    {
+        ApplyKillKnockbackAnimationEvent();
+    }
+
+    private void ApplyAnimationState(EnemyAnimationState stateId, bool force = false)
+    {
+        if (animationDriver == null)
+            ResolveAnimationDriver();
+
+        animationDriver?.Play(stateId, force);
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-        NetworkHealthComponent health = collision.gameObject.GetComponentInParent<NetworkHealthComponent>();
-        RagdollEntityComponent ragdoll = collision.gameObject.GetComponentInParent<RagdollEntityComponent>();
-        IKnockbackable knockbackable = collision.gameObject.GetComponentInParent<IKnockbackable>();
+        if (Object != null && !Object.HasStateAuthority)
+            return;
+
         PlayerMovement player = collision.gameObject.GetComponentInParent<PlayerMovement>();
+        NetworkHealthComponent health = GetPlayerComponent<NetworkHealthComponent>(collision.gameObject, player);
+        RagdollEntityComponent ragdoll = GetPlayerComponent<RagdollEntityComponent>(collision.gameObject, player);
+        IKnockbackable knockbackable = GetPlayerKnockbackable(collision.gameObject, player);
+        Transform killedVisual = GetPlayerVisualTransform(collision.gameObject, player);
 
         if (health == null && ragdoll == null && player == null)
             return;
@@ -745,13 +901,39 @@ public class CSHEnemy : NetworkBehaviour
         if ((health != null && health.IsDead) || (ragdoll != null && ragdoll.IsDead))
             return;
 
-        if (health != null)
-            health.Kill();
-        else if (ragdoll != null)
-            ragdoll.Kill();
+        Vector3 knockbackDirection = collision.transform.position - transform.position;
+        knockbackDirection.y = 0f;
+        if (knockbackDirection.sqrMagnitude <= 0.0001f)
+            knockbackDirection = visual != null ? visual.forward : transform.forward;
 
-        if (knockbackable != null)
-            knockbackable.ApplyKnockbackFrom(transform.position, killKnockbackForce, killKnockbackUpwardForce);
+        if (health != null)
+        {
+            health.Damage(attackDamage);
+            if (health.IsDead)
+            {
+                if (ragdoll != null)
+                {
+                    ragdoll.Kill();
+                    ragdoll.ResetRagdollVelocity();
+                }
+
+                TriggerKillAnimation(knockbackable, knockbackDirection, killedVisual);
+            }
+            else
+            {
+                TriggerAttackAnimation();
+            }
+        }
+        else if (ragdoll != null)
+        {
+            ragdoll.Kill();
+            ragdoll.ResetRagdollVelocity();
+            TriggerKillAnimation(knockbackable, knockbackDirection, killedVisual);
+        }
+        else
+        {
+            TriggerAttackAnimation();
+        }
 
         if (player != null && !player.IsLocalNetworkPlayer)
             return;
@@ -795,12 +977,77 @@ public class CSHEnemy : NetworkBehaviour
         if (candidate == null)
             return true;
 
-        NetworkHealthComponent health = candidate.GetComponentInParent<NetworkHealthComponent>();
+        PlayerMovement player = candidate.GetComponentInParent<PlayerMovement>();
+        NetworkHealthComponent health = GetPlayerComponent<NetworkHealthComponent>(candidate.gameObject, player);
         if (health != null && health.IsDead)
             return true;
 
-        RagdollEntityComponent ragdoll = candidate.GetComponentInParent<RagdollEntityComponent>();
+        RagdollEntityComponent ragdoll = GetPlayerComponent<RagdollEntityComponent>(candidate.gameObject, player);
         return ragdoll != null && ragdoll.IsDead;
+    }
+
+    private static T GetPlayerComponent<T>(GameObject source, PlayerMovement player) where T : Component
+    {
+        T component = source.GetComponentInParent<T>();
+        if (component != null)
+            return component;
+
+        return player != null ? player.GetComponentInChildren<T>(true) : null;
+    }
+
+    private static Transform GetPlayerVisualTransform(GameObject source, PlayerMovement player)
+    {
+        Transform playerRoot = player != null ? player.transform : source.GetComponentInParent<PlayerMovement>()?.transform;
+        if (playerRoot == null)
+            return source.transform;
+
+        Transform visual = FindChildByName(playerRoot, "Visual");
+        if (visual != null)
+            return visual;
+
+        Animator animator = playerRoot.GetComponentInChildren<Animator>(true);
+        if (animator != null)
+            return animator.transform;
+
+        RagdollPartComponent ragdollPart = source.GetComponentInParent<RagdollPartComponent>();
+        if (ragdollPart != null)
+            return ragdollPart.transform;
+
+        return playerRoot;
+    }
+
+    private static Transform FindChildByName(Transform root, string childName)
+    {
+        if (root == null)
+            return null;
+
+        if (root.name == childName)
+            return root;
+
+        foreach (Transform child in root)
+        {
+            Transform found = FindChildByName(child, childName);
+            if (found != null)
+                return found;
+        }
+
+        return null;
+    }
+
+    private static IKnockbackable GetPlayerKnockbackable(GameObject source, PlayerMovement player)
+    {
+        IKnockbackable knockbackable = source.GetComponentInParent<IKnockbackable>();
+        if (knockbackable != null || player == null)
+            return knockbackable;
+
+        MonoBehaviour[] behaviours = player.GetComponentsInChildren<MonoBehaviour>(true);
+        foreach (MonoBehaviour behaviour in behaviours)
+        {
+            if (behaviour is IKnockbackable candidate)
+                return candidate;
+        }
+
+        return null;
     }
 
     private IEnumerator Exit()

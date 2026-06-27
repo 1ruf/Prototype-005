@@ -9,6 +9,8 @@ public sealed class EnemyAnimationDriver : MonoBehaviour
     [SerializeField] private string idleStateName = "Idle";
     [SerializeField] private string patrolStateName = "Patrol";
     [SerializeField] private string chaseStateName = "Chase";
+    [SerializeField] private string attackStateName = "Attack";
+    [SerializeField] private string killStateName = "Kill";
 
     private EnemyAnimationState currentState = (EnemyAnimationState)(-1);
 
@@ -32,14 +34,42 @@ public sealed class EnemyAnimationDriver : MonoBehaviour
         int fullHash = Animator.StringToHash(animator.GetLayerName(layerIndex) + "." + stateName);
         int shortHash = Animator.StringToHash(stateName);
 
+        int playableHash;
         if (animator.HasState(layerIndex, fullHash))
-            animator.CrossFadeInFixedTime(fullHash, transitionDuration, layerIndex);
+            playableHash = fullHash;
         else if (animator.HasState(layerIndex, shortHash))
-            animator.CrossFadeInFixedTime(shortHash, transitionDuration, layerIndex);
+            playableHash = shortHash;
         else
             return;
 
+        if (force)
+        {
+            animator.Play(playableHash, layerIndex, 0f);
+            animator.Update(0f);
+        }
+        else
+        {
+            animator.CrossFadeInFixedTime(playableHash, transitionDuration, layerIndex);
+        }
+
         currentState = state;
+    }
+
+    public float GetClipLength(EnemyAnimationState state, float fallback)
+    {
+        Initialize();
+        if (animator == null || animator.runtimeAnimatorController == null)
+            return fallback;
+
+        string stateName = GetStateName(state);
+        AnimationClip[] clips = animator.runtimeAnimatorController.animationClips;
+        foreach (AnimationClip clip in clips)
+        {
+            if (clip != null && clip.name == stateName)
+                return Mathf.Max(fallback, clip.length);
+        }
+
+        return fallback;
     }
 
     public bool HasRequiredStates()
@@ -47,7 +77,9 @@ public sealed class EnemyAnimationDriver : MonoBehaviour
         Initialize();
         return HasState(EnemyAnimationState.Idle)
             && HasState(EnemyAnimationState.Patrol)
-            && HasState(EnemyAnimationState.Chase);
+            && HasState(EnemyAnimationState.Chase)
+            && HasState(EnemyAnimationState.Attack)
+            && HasState(EnemyAnimationState.Kill);
     }
 
     private void ResolveAnimator()
@@ -103,6 +135,8 @@ public sealed class EnemyAnimationDriver : MonoBehaviour
         {
             EnemyAnimationState.Idle => idleStateName,
             EnemyAnimationState.Chase => chaseStateName,
+            EnemyAnimationState.Attack => attackStateName,
+            EnemyAnimationState.Kill => killStateName,
             _ => patrolStateName
         };
     }

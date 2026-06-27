@@ -10,10 +10,10 @@ public class PlayerDebugDeathInput : MonoBehaviour
     private void Awake()
     {
         if (health == null)
-            health = GetComponent<NetworkHealthComponent>();
+            health = GetComponent<NetworkHealthComponent>() ?? GetComponentInParent<NetworkHealthComponent>() ?? GetComponentInParent<PlayerMovement>()?.GetComponentInChildren<NetworkHealthComponent>(true);
 
         if (playerMovement == null)
-            playerMovement = GetComponent<PlayerMovement>();
+            playerMovement = GetComponent<PlayerMovement>() ?? GetComponentInParent<PlayerMovement>();
     }
 
     private void Update()

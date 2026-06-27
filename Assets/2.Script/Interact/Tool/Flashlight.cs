@@ -14,7 +14,7 @@ public class Flashlight : NetworkHeldItem, IInteractable
     [SerializeField] private float thirdPersonLookPitchMultiplier = 0f;
 
     private float swayTime;
-    private bool firstPerson;
+    private bool isFirstPersonView;
 
     protected override void Awake()
     {
@@ -52,13 +52,13 @@ public class Flashlight : NetworkHeldItem, IInteractable
                 -sin * runSwayRoll) * intensity * runBlend;
         }
 
-        Quaternion lookRotation = firstPerson ? Quaternion.identity : Quaternion.Euler(lookPitch * thirdPersonLookPitchMultiplier, 0f, 0f);
-        ItemRoot.localRotation = (firstPerson ? FirstPersonRotation : ThirdPersonRotation) * lookRotation * Quaternion.Euler(swayEuler);
+        Quaternion lookRotation = isFirstPersonView ? Quaternion.identity : Quaternion.Euler(lookPitch * thirdPersonLookPitchMultiplier, 0f, 0f);
+        ItemRoot.localRotation = (isFirstPersonView ? FirstPersonRotation : ThirdPersonRotation) * lookRotation * Quaternion.Euler(swayEuler);
     }
 
     protected override void OnPerspectiveChanged(bool isFirstPerson)
     {
-        firstPerson = isFirstPerson;
+        isFirstPersonView = isFirstPerson;
         ApplyLightProfile();
     }
 
@@ -86,7 +86,7 @@ public class Flashlight : NetworkHeldItem, IInteractable
         if (lights == null)
             return;
 
-        float spotAngle = firstPerson ? firstPersonSpotAngle : thirdPersonSpotAngle;
+        float spotAngle = isFirstPersonView ? firstPersonSpotAngle : thirdPersonSpotAngle;
         foreach (UnityEngine.Light flashlightLight in lights)
         {
             if (flashlightLight != null && flashlightLight.type == LightType.Spot)
