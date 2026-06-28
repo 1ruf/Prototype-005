@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aece1b0b04424d9f991476fc16c24a02, type: 3}
+  m_Name: PlayerFearSettings
+  m_EditorClassIdentifier: 
+  soundPrefab: {fileID: 8432850011399242761, guid: a79e0121140a37e4d831c95a1415797c, type: 3}
+  contactClip: {fileID: 8300000, guid: 4382a6bdfe57fdc4f9a703b414512e97, type: 3}
+  runClip: {fileID: 8300000, guid: a8f84bbc82af84c429ef177c82730bc7, type: 3}
+  chasingClip: {fileID: 8300000, guid: b6688f321f4ff374c9153335d816d779, type: 3}
+  heartbeatAClip: {fileID: 8300000, guid: 863759f7f5658ac48b2c036d1b6d1c7d, type: 3}
+  heartbeatBClip: {fileID: 8300000, guid: fdc26181355561f43ab7399c679a5df4, type: 3}

@@ -122,6 +122,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4215ac335ac6e4048903f284a55c9b82, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  powerKey: _LIGHT_POWER_F1
+  togglePower: 1
+  targetPowerState: 1
+  invokeTriggeredLocally: 0
   Triggered:
     m_PersistentCalls:
       m_Calls: []

@@ -4,6 +4,8 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
 {
+    private static PlayerMovement activeLocalPlayer;
+
     [SerializeField] private float _speed;
     [SerializeField] private float _sprintMultiply;
     [SerializeField] private float _acceleration;
@@ -34,8 +36,11 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
     private UnityEngine.Behaviour[] _localOnlyCameraBehaviours;
     private Renderer[] _visualRenderers;
     private bool _localPresentationConfigured;
+    private bool _networkSpawned;
     private string _lastVisualStateName;
     private float _lastVisualAnimatorSpeed = -1f;
+    private Component[] _localCinemachineCameras;
+    private string _lastCameraAuthorityLog;
     private GameObject owner;
 
     private const string IdleStateName = "Base Layer.Idle";
@@ -48,12 +53,61 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
     [Networked] public NetworkBool IsMoving { get; set; }
     [Networked] public float VisualAnimationSpeed { get; set; }
 
-    public bool IsLocalNetworkPlayer => Object == null || Object.HasInputAuthority;
+    public bool IsLocalNetworkPlayer => IsLocalPlayerObject();
+    public Camera PlayerCamera
+    {
+        get
+        {
+            return Camera.main;
+        }
+    }
+
     public GameObject Owner => owner != null ? owner : gameObject;
 
     public void Initialize(GameObject entityOwner)
     {
         owner = entityOwner != null ? entityOwner : gameObject;
+    }
+
+    public void RequestNetworkPowerChange(string key, bool value)
+    {
+        if (Object == null)
+        {
+            NetworkPowerRuntime.ApplyPower(key, value);
+            return;
+        }
+
+        NetworkString<_64> networkKey = key;
+        if (Object.HasStateAuthority)
+        {
+            NetworkPowerRuntime.ApplyPower(key, value);
+            RPC_ApplyNetworkPower(networkKey, value);
+            return;
+        }
+
+        RPC_RequestNetworkPower(networkKey, value);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_RequestNetworkPower(NetworkString<_64> key, NetworkBool value)
+    {
+        NetworkPowerRuntime.ApplyPower(key.ToString(), value);
+        RPC_ApplyNetworkPower(key, value);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    private void RPC_ApplyNetworkPower(NetworkString<_64> key, NetworkBool value)
+    {
+        NetworkPowerRuntime.ApplyPower(key.ToString(), value);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_RequestNetworkPowerSnapshot()
+    {
+        NetworkPowerRuntime.ForEachPowerState((key, value) =>
+        {
+            RPC_ApplyNetworkPower(key, value);
+        });
     }
 
     private void Awake()
@@ -65,6 +119,7 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
 
         _networkController = GetComponent<NetworkCharacterController>();
         ResolveVisualAnimator();
+        DisableNetworkCameraUntilSpawned();
     }
 
     private void OnEnable()
@@ -80,6 +135,7 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
 
     public override void Spawned()
     {
+        _networkSpawned = true;
         _networkController = GetComponent<NetworkCharacterController>();
         ResolveVisualAnimator();
         ConfigureNetworkController();
@@ -91,10 +147,14 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
         }
 
         ConfigureLocalPresentation();
+
+        if (Object.HasInputAuthority && !Object.HasStateAuthority)
+            RPC_RequestNetworkPowerSnapshot();
     }
 
     private void OnDisable()
     {
+        _networkSpawned = false;
         PlayerRuntimeRegistry.Unregister(this);
 
         if (Object != null && Object.HasInputAuthority && Manager.Instance != null)
@@ -105,6 +165,12 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
     {
         if (Object != null)
         {
+            if (!_networkSpawned)
+            {
+                DisableNetworkCameraUntilSpawned();
+                return;
+            }
+
             EnsureLocalPresentation();
             RenderNetworkPresentation();
             return;
@@ -120,6 +186,9 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
 
     public override void FixedUpdateNetwork()
     {
+        if (!_networkSpawned)
+            return;
+
         if (_networkController == null)
             return;
 
@@ -166,11 +235,7 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
 
     private void AdjustFOV()
     {
-        if (_playerCamera == null)
-            return;
-
-        float targetFOV = Input.GetKey(KeyCode.LeftShift) ? _sprintFOV : _normalFOV;
-        _playerCamera.fieldOfView = Mathf.Lerp(_playerCamera.fieldOfView, targetFOV, Time.deltaTime * _fovTransitionSpeed);
+        ApplyLocalFOV(Input.GetKey(KeyCode.LeftShift));
     }
 
     private void GroundCheck()
@@ -245,6 +310,9 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
 
     private void RenderNetworkPresentation()
     {
+        if (IsLocalNetworkPlayer)
+            EnforceSingleLocalCamera();
+
         if (Object != null && !Object.HasStateAuthority)
             transform.rotation = Quaternion.Euler(0f, BodyYaw, 0f);
 
@@ -261,11 +329,8 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
             visualAnimationSpeed = CalculateVisualAnimationSpeed(localMoving, localSprinting, localSpeed);
         }
 
-        if (_playerCamera != null && IsLocalNetworkPlayer)
-        {
-            float targetFOV = IsSprinting ? _sprintFOV : _normalFOV;
-            _playerCamera.fieldOfView = Mathf.Lerp(_playerCamera.fieldOfView, targetFOV, Time.deltaTime * _fovTransitionSpeed);
-        }
+        if (IsLocalNetworkPlayer)
+            ApplyLocalFOV(Input.GetKey(KeyCode.LeftShift));
 
         if (_camAnimator == null)
         {
@@ -363,18 +428,10 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
     {
         bool local = IsLocalNetworkPlayer;
 
-        if (_playerCamera == null)
-            _playerCamera = GetComponentInChildren<Camera>(true);
-
-        if (_playerCamera != null)
-        {
-            _playerCamera.enabled = local;
-            AudioListener listener = _playerCamera.GetComponent<AudioListener>();
-            if (listener != null)
-                listener.enabled = local;
-        }
+        SetOwnedCamerasActive(false);
 
         _localOnlyCameraBehaviours = FindLocalOnlyCameraBehaviours();
+        _localCinemachineCameras = FindCinemachineCameras();
         foreach (UnityEngine.Behaviour behaviour in _localOnlyCameraBehaviours)
         {
             if (behaviour != null)
@@ -384,8 +441,226 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
         if (local && Manager.Instance != null)
             Manager.Instance.RegisterLocalPlayer(this);
 
+        if (local)
+        {
+            activeLocalPlayer = this;
+            EnforceSingleLocalCamera();
+        }
+        else
+        {
+            activeLocalPlayer?.EnforceSingleLocalCamera();
+        }
+
         SetLocalVisualRenderersVisible(!local);
         _localPresentationConfigured = true;
+
+        Debug.Log($"PlayerMovement: LocalPresentation local={local}, localPlayer={Runner?.LocalPlayer}, inputAuthority={Object?.InputAuthority}, object={name}.");
+    }
+
+    private bool IsLocalPlayerObject()
+    {
+        if (Object == null)
+            return true;
+
+        if (!_networkSpawned)
+            return false;
+
+        if (Runner == null || !Runner.IsRunning)
+            return false;
+
+        NetworkObject localPlayerObject = Runner.GetPlayerObject(Runner.LocalPlayer);
+        if (localPlayerObject != null)
+            return localPlayerObject == Object;
+
+        return Object.HasInputAuthority && Object.InputAuthority == Runner.LocalPlayer;
+    }
+
+    public override void Despawned(NetworkRunner runner, bool hasState)
+    {
+        _networkSpawned = false;
+        _localPresentationConfigured = false;
+        if (activeLocalPlayer == this)
+            activeLocalPlayer = null;
+
+        DisableNetworkCameraUntilSpawned();
+    }
+
+    private void DisableNetworkCameraUntilSpawned()
+    {
+        if (GetComponent<NetworkObject>() == null)
+            return;
+
+        SetOwnedCamerasActive(false);
+
+        UnityEngine.Behaviour[] behaviours = FindLocalOnlyCameraBehaviours();
+        foreach (UnityEngine.Behaviour behaviour in behaviours)
+        {
+            if (behaviour != null)
+                behaviour.enabled = false;
+        }
+    }
+
+    private void EnforceSingleLocalCamera()
+    {
+        Camera sceneCamera = Camera.main != null ? Camera.main : FindSceneMainCamera();
+        if (sceneCamera == null)
+            return;
+
+        sceneCamera.enabled = true;
+        SetCameraTag(sceneCamera, true);
+
+        AudioListener sceneListener = sceneCamera.GetComponent<AudioListener>();
+        if (sceneListener != null)
+            sceneListener.enabled = true;
+
+        SetCinemachineBrain(sceneCamera.gameObject, true);
+        int disabledPlayerCameras = DisableAllPlayerCameraComponents();
+        int disabledRemoteVirtualCameras = SetPlayerVirtualCamerasForLocalOwner();
+
+        string cameraAuthorityLog = $"owner={name}, sceneCamera={GetHierarchyPath(sceneCamera.transform)}, localPlayer={Runner?.LocalPlayer}, inputAuthority={Object?.InputAuthority}, disabledPlayerCameras={disabledPlayerCameras}, disabledRemoteVirtualCameras={disabledRemoteVirtualCameras}";
+        if (_lastCameraAuthorityLog != cameraAuthorityLog)
+        {
+            _lastCameraAuthorityLog = cameraAuthorityLog;
+            Debug.Log($"PlayerMovement: CameraAuthority {cameraAuthorityLog}.");
+        }
+    }
+
+    private static Camera FindSceneMainCamera()
+    {
+        Camera[] cameras = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (Camera camera in cameras)
+        {
+            if (camera != null && camera.name == "Main Camera" && camera.GetComponentInParent<PlayerMovement>() == null)
+                return camera;
+        }
+
+        foreach (Camera camera in cameras)
+        {
+            if (camera != null && camera.GetComponentInParent<PlayerMovement>() == null)
+                return camera;
+        }
+
+        return null;
+    }
+
+    private void SetOwnedCamerasActive(bool local)
+    {
+        Camera[] cameras = GetComponentsInChildren<Camera>(true);
+        foreach (Camera camera in cameras)
+        {
+            if (camera == null)
+                continue;
+
+            camera.enabled = false;
+            SetCameraTag(camera, false);
+
+            AudioListener[] listeners = camera.GetComponents<AudioListener>();
+            foreach (AudioListener listener in listeners)
+            {
+                if (listener != null)
+                    listener.enabled = false;
+            }
+
+            SetCinemachineBrain(camera.gameObject, false);
+        }
+    }
+
+    private static int DisableAllPlayerCameraComponents()
+    {
+        int disabledCameras = 0;
+        Camera[] cameras = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (Camera camera in cameras)
+        {
+            if (camera == null || camera.GetComponentInParent<PlayerMovement>() == null)
+                continue;
+
+            if (camera.enabled)
+                disabledCameras++;
+
+            camera.enabled = false;
+            SetCameraTag(camera, false);
+
+            AudioListener listener = camera.GetComponent<AudioListener>();
+            if (listener != null)
+                listener.enabled = false;
+
+            SetCinemachineBrain(camera.gameObject, false);
+        }
+
+        return disabledCameras;
+    }
+
+    private static int SetPlayerVirtualCamerasForLocalOwner()
+    {
+        int disabledRemoteVirtualCameras = 0;
+        System.Type cameraType = System.Type.GetType("Unity.Cinemachine.CinemachineCamera, Unity.Cinemachine");
+        if (cameraType == null)
+            return 0;
+
+        UnityEngine.Object[] virtualCameras = FindObjectsByType(cameraType, FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (UnityEngine.Object virtualCameraObject in virtualCameras)
+        {
+            Component virtualCamera = virtualCameraObject as Component;
+            if (virtualCamera == null)
+                continue;
+
+            PlayerMovement owner = virtualCamera.GetComponentInParent<PlayerMovement>();
+            if (owner == null)
+                continue;
+
+            bool shouldEnable = owner == activeLocalPlayer;
+            if (virtualCamera is UnityEngine.Behaviour behaviour)
+            {
+                if (behaviour.enabled && !shouldEnable)
+                    disabledRemoteVirtualCameras++;
+
+                behaviour.enabled = shouldEnable;
+            }
+        }
+
+        return disabledRemoteVirtualCameras;
+    }
+
+    private static void SetCameraTag(Camera camera, bool mainCamera)
+    {
+        if (camera == null)
+            return;
+
+        if (mainCamera)
+        {
+            camera.tag = "MainCamera";
+            return;
+        }
+
+        if (camera.CompareTag("MainCamera"))
+            camera.tag = "Untagged";
+    }
+
+    private static string GetHierarchyPath(Transform target)
+    {
+        if (target == null)
+            return string.Empty;
+
+        string path = target.name;
+        Transform current = target.parent;
+        while (current != null)
+        {
+            path = current.name + "/" + path;
+            current = current.parent;
+        }
+
+        return path;
+    }
+
+    private static void SetCinemachineBrain(GameObject cameraObject, bool enabled)
+    {
+        System.Type brainType = System.Type.GetType("Unity.Cinemachine.CinemachineBrain, Unity.Cinemachine");
+        if (brainType == null || cameraObject == null)
+            return;
+
+        Component brain = cameraObject.GetComponent(brainType);
+        if (brain is UnityEngine.Behaviour behaviour)
+            behaviour.enabled = enabled;
     }
 
     private void EnsureLocalPresentation()
@@ -394,17 +669,142 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
             ConfigureLocalPresentation();
     }
 
+    private void ApplyLocalFOV(bool sprinting)
+    {
+        float targetFOV = sprinting ? _sprintFOV : _normalFOV;
+        float currentFOV = GetCurrentLocalFOV();
+        float nextFOV = Mathf.Lerp(currentFOV, targetFOV, Time.deltaTime * _fovTransitionSpeed);
+
+        Camera targetCamera = Camera.main;
+        if (targetCamera != null)
+            targetCamera.fieldOfView = nextFOV;
+
+        ApplyCinemachineFOV(nextFOV);
+    }
+
+    private float GetCurrentLocalFOV()
+    {
+        if (_localCinemachineCameras != null)
+        {
+            foreach (Component virtualCamera in _localCinemachineCameras)
+            {
+                if (TryGetCinemachineFOV(virtualCamera, out float fov))
+                    return fov;
+            }
+        }
+
+        Camera targetCamera = Camera.main;
+        return targetCamera != null ? targetCamera.fieldOfView : _normalFOV;
+    }
+
+    private void ApplyCinemachineFOV(float fov)
+    {
+        if (_localCinemachineCameras == null || _localCinemachineCameras.Length == 0)
+            _localCinemachineCameras = FindCinemachineCameras();
+
+        if (_localCinemachineCameras == null)
+            return;
+
+        foreach (Component virtualCamera in _localCinemachineCameras)
+            TrySetCinemachineFOV(virtualCamera, fov);
+    }
+
+    private Component[] FindCinemachineCameras()
+    {
+        System.Type cameraType = System.Type.GetType("Unity.Cinemachine.CinemachineCamera, Unity.Cinemachine");
+        if (cameraType == null)
+            return System.Array.Empty<Component>();
+
+        Component[] components = GetComponentsInChildren(cameraType, true);
+        return components ?? System.Array.Empty<Component>();
+    }
+
+    private static bool TryGetCinemachineFOV(Component virtualCamera, out float fov)
+    {
+        fov = 0f;
+        if (virtualCamera == null)
+            return false;
+
+        if (!TryGetCinemachineLens(virtualCamera, out object lens, out _, out _))
+            return false;
+
+        System.Reflection.FieldInfo fieldOfView = lens.GetType().GetField("FieldOfView");
+        if (fieldOfView == null || fieldOfView.GetValue(lens) is not float value)
+            return false;
+
+        fov = value;
+        return true;
+    }
+
+    private static bool TrySetCinemachineFOV(Component virtualCamera, float fov)
+    {
+        if (virtualCamera == null)
+            return false;
+
+        if (!TryGetCinemachineLens(virtualCamera, out object lens, out System.Reflection.PropertyInfo lensProperty, out System.Reflection.FieldInfo lensField))
+            return false;
+
+        System.Reflection.FieldInfo fieldOfView = lens.GetType().GetField("FieldOfView");
+        if (fieldOfView == null)
+            return false;
+
+        fieldOfView.SetValue(lens, fov);
+
+        if (lensProperty != null)
+        {
+            lensProperty.SetValue(virtualCamera, lens);
+            return true;
+        }
+
+        if (lensField != null)
+        {
+            lensField.SetValue(virtualCamera, lens);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetCinemachineLens(Component virtualCamera, out object lens, out System.Reflection.PropertyInfo lensProperty, out System.Reflection.FieldInfo lensField)
+    {
+        lens = null;
+        lensProperty = null;
+        lensField = null;
+
+        if (virtualCamera == null)
+            return false;
+
+        System.Type type = virtualCamera.GetType();
+        lensProperty = type.GetProperty("Lens");
+        if (lensProperty != null)
+        {
+            lens = lensProperty.GetValue(virtualCamera);
+            return lens != null;
+        }
+
+        lensField = type.GetField("Lens");
+        if (lensField == null)
+            return false;
+
+        lens = lensField.GetValue(virtualCamera);
+        return lens != null;
+    }
+
     private UnityEngine.Behaviour[] FindLocalOnlyCameraBehaviours()
     {
         var behaviours = new System.Collections.Generic.List<UnityEngine.Behaviour>();
         AddBehavioursByTypeName("Unity.Cinemachine.CinemachineCamera", behaviours);
         AddBehavioursByTypeName("Unity.Cinemachine.CinemachineBrain", behaviours);
+        AddBehavioursByTypeName(nameof(MouseLookSystem), behaviours);
+        AddBehavioursByTypeName(nameof(CameraBobbingController), behaviours);
+        AddBehavioursByTypeName(nameof(CameraShakeController), behaviours);
         return behaviours.ToArray();
     }
 
     private void AddBehavioursByTypeName(string typeName, System.Collections.Generic.List<UnityEngine.Behaviour> behaviours)
     {
-        System.Type type = System.Type.GetType(typeName + ", Unity.Cinemachine");
+        System.Type type = System.Type.GetType(typeName + ", Unity.Cinemachine") ??
+                           System.Type.GetType(typeName + ", Assembly-CSharp");
         if (type == null)
             return;
 

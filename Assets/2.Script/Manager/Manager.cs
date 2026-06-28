@@ -5,7 +5,7 @@ public class Manager : MonoBehaviour
     public static Manager Instance { get; set; }
 
     public ScreenManager ScreenManager;
-    public UIManager UIManager;
+    public InteractUIController UIManager;
     public PlayerManager PlayerManager;
 
     private void Awake()

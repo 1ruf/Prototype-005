@@ -1,12 +1,12 @@
-using NUnit.Framework;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using static UnityEngine.Rendering.DebugUI;
 
 public class PowerController : GameControllerBase
 {
-    private Dictionary<string, PowerContainer> _container = new();
+    private readonly Dictionary<string, PowerContainer> _container = new Dictionary<string, PowerContainer>();
+    private readonly Dictionary<string, bool> _states = new Dictionary<string, bool>();
+
     public override GameControllerBase Init()
     {
         return this;
@@ -19,6 +19,9 @@ public class PowerController : GameControllerBase
 
         PowerContainer newContainer = new();
         _container.Add(key, newContainer);
+
+        if (_states.TryGetValue(key, out bool state))
+            newContainer.SupplyPowers(state);
 
         return newContainer;
     }
@@ -43,6 +46,17 @@ public class PowerController : GameControllerBase
         return registedContainer;
     }
 
+    public bool TryGetContainer(string key, out PowerContainer container)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            container = null;
+            return false;
+        }
+
+        return _container.TryGetValue(key, out container);
+    }
+
     public void ChangePower(PowerContainer target, bool value)
     {
         foreach (var container in _container.Values)
@@ -50,10 +64,51 @@ public class PowerController : GameControllerBase
             container.SupplyPowers(value);
         }
     }
+
+    public void SetPower(string key, bool value)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        _states[key] = value;
+        GetContainer(key).SupplyPowers(value);
+    }
+
+    public void TogglePower(string key)
+    {
+        SetPower(key, !GetPower(key));
+    }
+
+    public bool GetPower(string key)
+    {
+        return !string.IsNullOrWhiteSpace(key) && _states.TryGetValue(key, out bool value) && value;
+    }
+
+    public bool HasPowerState(string key)
+    {
+        return !string.IsNullOrWhiteSpace(key) && _states.ContainsKey(key);
+    }
+
+    public void SetInitialPower(string key, bool value)
+    {
+        if (string.IsNullOrWhiteSpace(key) || _states.ContainsKey(key))
+            return;
+
+        SetPower(key, value);
+    }
+
+    public void ForEachState(Action<string, bool> callback)
+    {
+        if (callback == null)
+            return;
+
+        foreach (KeyValuePair<string, bool> state in _states)
+            callback(state.Key, state.Value);
+    }
 }
 public class PowerContainer
 {
-    private HashSet<IPowerable> _powerables = new();
+    private readonly HashSet<IPowerable> _powerables = new HashSet<IPowerable>();
 
     public void RegistPowerObject(IPowerable powerable)
     {

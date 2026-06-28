@@ -46,6 +46,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a8719684b01e25439790c3cf6efd836, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  powerKey: _LIGHT_POWER_F1
   enableMat: {fileID: 2100000, guid: f134abf3f8861984cb2079191b4614c5, type: 2}
   disableMat: {fileID: 2100000, guid: 8b748c60a82348a4ea7172e93ed8ca5f, type: 2}
   mainLight: {fileID: 4010442171121910501}

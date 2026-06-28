@@ -5,6 +5,11 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
+
+    [Header("Default Controllers")]
+    [SerializeField] private bool registerPowerController = true;
+    [SerializeField] private bool registerLightController = true;
+
     private readonly List<GameControllerBase> _gameControllers = new List<GameControllerBase>();
     private readonly Dictionary<Type, GameControllerBase> _controllerMap = new Dictionary<Type, GameControllerBase>();
     private bool initialized;
@@ -12,6 +17,7 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         CreateManagerInstance();
+        RegisterDefaultControllers();
     }
 
     private void Start()
@@ -64,6 +70,18 @@ public class GameManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    private void RegisterDefaultControllers()
+    {
+        if (Instance != this)
+            return;
+
+        if (registerPowerController && !TryGetController(out PowerController _))
+            Register(new PowerController());
+
+        if (registerLightController && !TryGetController(out LightController _))
+            Register(new LightController());
+    }
+
     public static GameManager EnsureInstance()
     {
         if (Instance != null)
@@ -91,11 +109,23 @@ public class GameManager : MonoBehaviour
 
     public T GetController<T>() where T : GameControllerBase
     {
-        if (_controllerMap.TryGetValue(typeof(T), out GameControllerBase controller))
-            return (T)controller;
+        if (TryGetController(out T controller))
+            return controller;
 
         Debug.LogError($"{typeof(T)} -> type missmatch");
         return null;
+    }
+
+    public bool TryGetController<T>(out T controller) where T : GameControllerBase
+    {
+        if (_controllerMap.TryGetValue(typeof(T), out GameControllerBase gameController))
+        {
+            controller = (T)gameController;
+            return true;
+        }
+
+        controller = null;
+        return false;
     }
 
     private T Register<T>(T controller) where T : GameControllerBase

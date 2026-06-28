@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Flashlight : NetworkHeldItem, IInteractable
+public class Flashlight : PlayerEquipment
 {
     [SerializeField] private UnityEngine.Light[] lights;
     [SerializeField] private GameObject beamObject;
@@ -9,7 +9,7 @@ public class Flashlight : NetworkHeldItem, IInteractable
     [SerializeField] private float runSwayPitch = 6f;
     [SerializeField] private float runSwayYaw = 0f;
     [SerializeField] private float runSwayRoll = 0f;
-    [SerializeField] private float runSwayFrequency = 12f;
+    [SerializeField] private float runSwayFrequency = 6f;
     [SerializeField] private float walkSwayMultiplier = 0.45f;
     [SerializeField] private float thirdPersonLookPitchMultiplier = 0f;
 
@@ -26,13 +26,6 @@ public class Flashlight : NetworkHeldItem, IInteractable
     {
         base.Initialize(holder);
         EnsureLightReferences();
-    }
-
-    public void Interact()
-    {
-        NetworkPlayerItemHolder holder = GetComponentInParent<NetworkPlayerItemHolder>();
-        if (holder != null)
-            holder.RequestToggleActive();
     }
 
     public override void TickPresentation(float deltaTime, bool moving, bool sprinting, float normalizedMoveSpeed, float lookPitch)

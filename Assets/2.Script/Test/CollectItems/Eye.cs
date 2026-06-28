@@ -6,6 +6,7 @@ public class Eye : MonoBehaviour, ICollectable
     public void Get()
     {
         CSH_Manager.Instance.AddFacePart(currentFacePart);
-        Destroy(transform.parent.gameObject);
+        GameObject target = transform.parent != null ? transform.parent.gameObject : gameObject;
+        GameObjectPoolManager.Despawn(target);
     }
 }

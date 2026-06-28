@@ -1,10 +1,13 @@
 using UnityEngine;
 
-public class GrabTool : MonoBehaviour, IInteractable
+public class GrabTool : MonoBehaviour, IInteractable, IHoldInteractable
 {
     [SerializeField] private Transform _Hand;
+    [SerializeField] private float requiredHoldTime;
 
     private bool _isGrab;
+    public float RequiredHoldTime => Mathf.Max(0f, requiredHoldTime);
+
     public void Interact()
     {
         _isGrab = true;

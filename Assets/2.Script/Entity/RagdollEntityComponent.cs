@@ -19,6 +19,10 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
     [SerializeField] private DeadCameraController deadCamera;
     [SerializeField] private BloodSplatterComponent bloodSplatter;
     [SerializeField] private int bloodSplatterCountOnDeath = 14;
+    [SerializeField] private int bloodSplatterCountOnSurfaceContact = 1;
+    [SerializeField] private float bloodSplatterSurfaceReentryDelay = 0.35f;
+    [SerializeField] private float bloodSplatterSurfaceContactProbeRadius = 0.18f;
+    [SerializeField] private LayerMask bloodSplatterSurfaceMask = (1 << 7) | (1 << 8);
 
     [Networked] public NetworkBool IsDead { get; private set; }
     [Networked] public NetworkBool IsRagdollEnabled { get; private set; }
@@ -26,6 +30,8 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
     [Networked] private int KnockbackSequence { get; set; }
     [Networked] private int BloodSplatterSequence { get; set; }
     [Networked] private int BloodSplatterCount { get; set; }
+    [Networked] private Vector3 BloodSplatterPosition { get; set; }
+    [Networked] private Vector3 BloodSplatterDirection { get; set; }
     [Networked] private int SyncedRagdollPartCount { get; set; }
     [Networked, Capacity(MaxSyncedRagdollParts)] private NetworkArray<Vector3> SyncedRagdollPartPositions => default;
     [Networked, Capacity(MaxSyncedRagdollParts)] private NetworkArray<Quaternion> SyncedRagdollPartRotations => default;
@@ -40,6 +46,9 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
     private Renderer[] nonVisualRenderers;
     private bool bloodSplatterSpawnedForDeath;
     private int lastAppliedBloodSplatterSequence;
+    private readonly System.Collections.Generic.HashSet<RagdollPartComponent> bloodSplatteredSurfaceParts = new System.Collections.Generic.HashSet<RagdollPartComponent>();
+    private readonly System.Collections.Generic.Dictionary<RagdollPartComponent, float> surfaceExitTimes = new System.Collections.Generic.Dictionary<RagdollPartComponent, float>();
+    private readonly Collider[] surfaceContactBuffer = new Collider[8];
 
     public GameObject Owner => owner != null ? owner : gameObject;
 
@@ -63,6 +72,7 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
         ApplyNetworkedKnockbackIfNeeded();
         ApplyNetworkedBloodSplatterIfNeeded();
         ApplyNetworkedRagdollPoseIfNeeded(Time.deltaTime);
+        DetectRagdollSurfaceContactsFromParts();
     }
 
     public override void FixedUpdateNetwork()
@@ -155,6 +165,25 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
         RPC_RequestBloodSplatter(count);
     }
 
+    public void NotifyRagdollSurfaceContact(RagdollPartComponent part, Vector3 contactPoint, Vector3 contactNormal, int surfaceLayer)
+    {
+        if (!CanSpawnSurfaceBloodForPart(part))
+            return;
+
+        if ((bloodSplatterSurfaceMask.value & (1 << surfaceLayer)) == 0)
+            return;
+
+        SpawnSurfaceBloodForPart(part, contactPoint, contactNormal);
+    }
+
+    public void NotifyRagdollSurfaceExit(RagdollPartComponent part, int surfaceLayer)
+    {
+        if (part == null || (bloodSplatterSurfaceMask.value & (1 << surfaceLayer)) == 0)
+            return;
+
+        surfaceExitTimes[part] = Time.time;
+    }
+
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
     private void RPC_RequestDeath()
     {
@@ -237,6 +266,8 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
             if (!dead)
             {
                 bloodSplatterSpawnedForDeath = false;
+                bloodSplatteredSurfaceParts.Clear();
+                surfaceExitTimes.Clear();
             }
         }
 
@@ -277,6 +308,8 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
             return;
 
         BloodSplatterCount = count;
+        BloodSplatterPosition = Owner.transform.position;
+        BloodSplatterDirection = KnockbackImpulse;
         BloodSplatterSequence++;
         bloodSplatterSpawnedForDeath = true;
         ApplyBloodSplatter(BloodSplatterCount);
@@ -285,10 +318,17 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
 
     private void PublishBloodSplatterEvent(int count)
     {
+        PublishBloodSplatterEvent(count, Owner.transform.position, KnockbackImpulse);
+    }
+
+    private void PublishBloodSplatterEvent(int count, Vector3 sourcePosition, Vector3 impulseDirection)
+    {
         if (count <= 0)
             return;
 
         BloodSplatterCount = count;
+        BloodSplatterPosition = sourcePosition;
+        BloodSplatterDirection = impulseDirection;
         BloodSplatterSequence++;
         ApplyBloodSplatter(BloodSplatterCount);
         lastAppliedBloodSplatterSequence = BloodSplatterSequence;
@@ -324,7 +364,103 @@ public class RagdollEntityComponent : NetworkBehaviour, INetworkEntityComponent,
             return;
 
         EnsureReferences();
-        bloodSplatter?.SpawnBlood(count, Owner.transform.position, KnockbackImpulse);
+        Vector3 sourcePosition = BloodSplatterPosition;
+        if (sourcePosition == Vector3.zero)
+            sourcePosition = Owner.transform.position;
+
+        bloodSplatter?.SpawnBlood(count, sourcePosition, BloodSplatterDirection);
+    }
+
+    private void DetectRagdollSurfaceContactsFromParts()
+    {
+        if (!IsDead || !IsRagdollEnabled || bloodSplatterCountOnSurfaceContact <= 0)
+            return;
+
+        EnsureReferences();
+
+        if (parts == null || parts.Length == 0)
+            return;
+
+        float radius = Mathf.Max(0.01f, bloodSplatterSurfaceContactProbeRadius);
+        for (int i = 0; i < parts.Length; i++)
+        {
+            RagdollPartComponent part = parts[i];
+            if (part != null && bloodSplatteredSurfaceParts.Contains(part) && !surfaceExitTimes.ContainsKey(part) && !IsPartNearBloodSurface(part))
+                surfaceExitTimes[part] = Time.time;
+
+            if (!CanSpawnSurfaceBloodForPart(part))
+                continue;
+
+            Vector3 partPosition = part.transform.position;
+            int hitCount = Physics.OverlapSphereNonAlloc(partPosition, radius, surfaceContactBuffer, bloodSplatterSurfaceMask, QueryTriggerInteraction.Ignore);
+            for (int hitIndex = 0; hitIndex < hitCount; hitIndex++)
+            {
+                Collider surface = surfaceContactBuffer[hitIndex];
+                if (surface == null || part.Collider == surface)
+                    continue;
+
+                Vector3 contactPoint = surface.ClosestPoint(partPosition);
+                Vector3 normal = partPosition - contactPoint;
+                if (normal.sqrMagnitude <= 0.0001f)
+                    normal = Vector3.up;
+
+                SpawnSurfaceBloodForPart(part, contactPoint, normal.normalized);
+                break;
+            }
+        }
+    }
+
+    private bool CanSpawnSurfaceBloodForPart(RagdollPartComponent part)
+    {
+        if (part == null || !IsDead || !IsRagdollEnabled || bloodSplatterCountOnSurfaceContact <= 0)
+            return false;
+
+        if (bloodSplatteredSurfaceParts.Contains(part))
+        {
+            if (!surfaceExitTimes.TryGetValue(part, out float exitTime))
+                return false;
+
+            if (Time.time - exitTime < bloodSplatterSurfaceReentryDelay)
+                return false;
+
+            bloodSplatteredSurfaceParts.Remove(part);
+            surfaceExitTimes.Remove(part);
+        }
+
+        return true;
+    }
+
+    private bool IsPartNearBloodSurface(RagdollPartComponent part)
+    {
+        if (part == null)
+            return false;
+
+        int hitCount = Physics.OverlapSphereNonAlloc(
+            part.transform.position,
+            Mathf.Max(0.01f, bloodSplatterSurfaceContactProbeRadius),
+            surfaceContactBuffer,
+            bloodSplatterSurfaceMask,
+            QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider surface = surfaceContactBuffer[i];
+            if (surface != null && surface != part.Collider)
+                return true;
+        }
+
+        return false;
+    }
+
+    private void SpawnSurfaceBloodForPart(RagdollPartComponent part, Vector3 contactPoint, Vector3 contactNormal)
+    {
+        EnsureReferences();
+
+        if (bloodSplatter == null)
+            return;
+
+        bloodSplatteredSurfaceParts.Add(part);
+        bloodSplatter.SpawnBloodOnSurface(bloodSplatterCountOnSurfaceContact, contactPoint, contactNormal);
     }
 
     private void CaptureNetworkedRagdollPose()

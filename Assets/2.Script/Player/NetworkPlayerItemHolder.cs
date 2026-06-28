@@ -4,7 +4,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
 {
-    [SerializeField] private NetworkHeldItem startingItemPrefab;
+    [SerializeField] private PlayerEquipment startingItemPrefab;
     [SerializeField] private Transform firstPersonAnchor;
     [SerializeField] private Transform thirdPersonAnchor;
     [SerializeField] private PlayerMovement playerMovement;
@@ -14,7 +14,7 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
     [Networked] private NetworkBool HeldItemVisible { get; set; }
     [Networked] private NetworkBool HeldItemActive { get; set; }
 
-    private NetworkHeldItem itemInstance;
+    private PlayerEquipment itemInstance;
     private bool networkSpawned;
     private bool localHeldItemVisible = true;
     private bool localHeldItemActive;
@@ -22,6 +22,7 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
     private bool lastVisible;
     private bool lastActive;
     private bool thirdPersonPresentationSuppressed;
+    private bool itemInstanceFromPool;
     private GameObject owner;
 
     private bool IsLocalPlayer => Object == null || Object.HasInputAuthority;
@@ -62,6 +63,12 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
     public override void Despawned(NetworkRunner runner, bool hasState)
     {
         networkSpawned = false;
+        ReleaseItemInstance();
+    }
+
+    private void OnDestroy()
+    {
+        ReleaseItemInstance();
     }
 
     private void Update()
@@ -227,7 +234,7 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
         if (itemInstance != null)
             return;
 
-        NetworkHeldItem existingItem = GetOwnerTransform().GetComponentInChildren<NetworkHeldItem>(true);
+        PlayerEquipment existingItem = GetOwnerTransform().GetComponentInChildren<PlayerEquipment>(true);
         if (existingItem != null && existingItem.gameObject != gameObject)
         {
             itemInstance = existingItem;
@@ -238,9 +245,22 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
         if (startingItemPrefab == null)
             return;
 
-        itemInstance = Instantiate(startingItemPrefab, transform);
+        itemInstance = GameObjectPoolManager.Spawn(startingItemPrefab, Vector3.zero, Quaternion.identity, transform, false);
+        itemInstanceFromPool = itemInstance != null;
         itemInstance.name = startingItemPrefab.name;
         itemInstance.Initialize(this);
+    }
+
+    private void ReleaseItemInstance()
+    {
+        if (itemInstance == null || !itemInstanceFromPool)
+            return;
+
+        PlayerEquipment pooledItem = itemInstance;
+        itemInstance = null;
+        itemInstanceFromPool = false;
+        localPresentationConfigured = false;
+        GameObjectPoolManager.Despawn(pooledItem);
     }
 
     private void ResolveReferences()

@@ -5,20 +5,29 @@ public class CeilingLight : PoweredObject
     [SerializeField] private Material enableMat;
     [SerializeField] private Material disableMat;
 
-    [SerializeField] private Light mainLight;
-
-    private readonly static string _lightContainerKey = "_LIGHT_POWER_F1";
+    [SerializeField] private UnityEngine.Light mainLight;
 
     private MeshRenderer _renderer;
 
-    private void Start()
+    private void Awake()
     {
-        GameManager.Instance.GetController<PowerController>().GetContainer(_lightContainerKey);
         _renderer = GetComponent<MeshRenderer>();
     }
+
     protected override void SupplyPower(bool value)
     {
-        _renderer.material = value ? enableMat : disableMat;
-        mainLight.enabled = value;
+        if (_renderer == null)
+            _renderer = GetComponent<MeshRenderer>();
+
+        if (_renderer != null)
+            _renderer.material = value ? enableMat : disableMat;
+
+        if (mainLight != null)
+            mainLight.enabled = value;
+    }
+
+    protected override bool GetInitialPowerState()
+    {
+        return mainLight != null && mainLight.enabled;
     }
 }

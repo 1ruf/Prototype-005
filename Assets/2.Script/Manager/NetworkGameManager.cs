@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using Fusion;
 using Fusion.Sockets;
+using Photon.Voice.Fusion;
+using Photon.Voice.Unity;
+using Photon.Voice.Unity.UtilityScripts;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -29,6 +32,7 @@ public class NetworkGameManager : MonoBehaviour, INetworkRunnerCallbacks
     private readonly HashSet<int> usedPlayerSpawnPointIndices = new HashSet<int>();
     private readonly HashSet<int> usedEnemySpawnPointIndices = new HashSet<int>();
     private NetworkRunner runner;
+    private FusionVoiceClient registeredVoiceClient;
 
     public NetworkRunner Runner => runner;
     public bool IsServer => runner != null && runner.IsServer;
@@ -56,6 +60,7 @@ public class NetworkGameManager : MonoBehaviour, INetworkRunnerCallbacks
 
         runner.ProvideInput = true;
         runner.AddCallbacks(this);
+        EnsureVoiceRuntimeComponents();
 
         NetworkSceneManagerDefault sceneManager = GetComponent<NetworkSceneManagerDefault>();
         if (sceneManager == null)
@@ -88,7 +93,48 @@ public class NetworkGameManager : MonoBehaviour, INetworkRunnerCallbacks
         if (Instance != this)
             return;
 
+        if (runner != null && registeredVoiceClient != null)
+            runner.RemoveCallbacks(registeredVoiceClient);
+
         Instance = null;
+    }
+
+    private void EnsureVoiceRuntimeComponents()
+    {
+        Recorder recorder = GetComponentInChildren<Recorder>(true);
+        if (recorder == null)
+            recorder = gameObject.AddComponent<Recorder>();
+
+        FusionVoiceClient voiceClient = GetComponent<FusionVoiceClient>();
+        if (voiceClient == null)
+            voiceClient = gameObject.AddComponent<FusionVoiceClient>();
+
+        VoiceChatManager voiceChatManager = GetComponent<VoiceChatManager>();
+        if (voiceChatManager == null)
+            voiceChatManager = gameObject.AddComponent<VoiceChatManager>();
+
+        VoiceChatDiagnostics diagnostics = GetComponent<VoiceChatDiagnostics>();
+        if (diagnostics == null)
+            diagnostics = gameObject.AddComponent<VoiceChatDiagnostics>();
+
+        if (recorder.GetComponent<MicAmplifier>() == null)
+            recorder.gameObject.AddComponent<MicAmplifier>();
+
+        if (recorder.GetComponent<MicrophonePermission>() == null)
+            recorder.gameObject.AddComponent<MicrophonePermission>();
+
+        voiceClient.PrimaryRecorder = recorder;
+        voiceClient.UseFusionAppSettings = true;
+        voiceClient.UseFusionAuthValues = true;
+
+        if (registeredVoiceClient != voiceClient)
+        {
+            if (registeredVoiceClient != null)
+                runner.RemoveCallbacks(registeredVoiceClient);
+
+            runner.AddCallbacks(voiceClient);
+            registeredVoiceClient = voiceClient;
+        }
     }
 
     public void SpawnEnemyNear(Vector3 origin)

@@ -47,9 +47,13 @@ public sealed class CSHGameController : GameControllerBase
         if (host == null || host.EnemyPrefab == null)
             return;
 
-        GameObject enemy = Object.Instantiate(host.EnemyPrefab, null);
         Vector3 origin = GetSpawnOrigin();
-        enemy.transform.position = origin + new Vector3(Random.Range(5, 20), enemy.transform.position.y, Random.Range(5, 20));
+        Vector3 position = origin + new Vector3(Random.Range(5, 20), host.EnemyPrefab.transform.position.y, Random.Range(5, 20));
+        GameObject enemy = GameObjectPoolManager.Spawn(host.EnemyPrefab, position, host.EnemyPrefab.transform.rotation);
+        if (enemy == null)
+            return;
+
+        enemy.transform.position = position;
     }
 
     private void CheckCompletion()

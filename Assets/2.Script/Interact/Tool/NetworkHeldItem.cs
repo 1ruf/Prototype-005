@@ -1,7 +1,6 @@
-using Fusion;
 using UnityEngine;
 
-public abstract class NetworkHeldItem : MonoBehaviour, IItem
+public abstract class PlayerEquipment : MonoBehaviour
 {
     [Header("Presentation")]
     [SerializeField] private Transform itemRoot;
@@ -130,4 +129,8 @@ public abstract class NetworkHeldItem : MonoBehaviour, IItem
                 heldCollider.enabled = enabled;
         }
     }
+}
+
+public abstract class NetworkHeldItem : PlayerEquipment, IItem
+{
 }

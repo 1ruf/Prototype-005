@@ -1,16 +1,21 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-using static UnityEngine.Rendering.DebugUI;
 
 public class ScreenManager : MonoBehaviour
 {
     [SerializeField] private float _interactableRadius;
+    [SerializeField] private LayerMask _interactableLayerMask = ~0;
+    [SerializeField] private bool _debugInteractionRay;
     [SerializeField] private Texture2D _mouseCursor;
     [SerializeField] private GameObject _lockedMouseCursor;
 
     private PlayerMovement localPlayer;
     private Camera localCamera;
     private bool hasLocalPlayer;
+    private float nextInteractionRayDebugTime;
+    private Component holdTarget;
+    private float holdElapsedTime;
+    private bool holdInteractionTriggered;
 
     private void OnEnable()
     {
@@ -22,7 +27,7 @@ public class ScreenManager : MonoBehaviour
     {
         localPlayer = player;
         hasLocalPlayer = player != null;
-        localCamera = player != null ? player.GetComponentInChildren<Camera>(true) : null;
+        localCamera = Camera.main;
 
         if (localCamera != null)
             localCamera.enabled = true;
@@ -36,7 +41,7 @@ public class ScreenManager : MonoBehaviour
         localPlayer = null;
         localCamera = null;
         hasLocalPlayer = false;
-        Highlight(false, 0f);
+        Highlight(false);
     }
 
     public void MousepointerLock(bool locked)
@@ -59,7 +64,7 @@ public class ScreenManager : MonoBehaviour
 
         if (!ResolveLocalCamera())
         {
-            Highlight(false, 0f);
+            Highlight(false);
             return;
         }
 
@@ -68,30 +73,195 @@ public class ScreenManager : MonoBehaviour
 
     private void CheckInteract()
     {
+        ResolveLocalPlayer();
+
         Ray ray = new Ray(localCamera.transform.position, localCamera.transform.forward);
 
-        RaycastHit hitInfo;
-        if (Physics.Raycast(ray, out hitInfo, _interactableRadius))
+        if (Physics.Raycast(ray, out RaycastHit hitInfo, _interactableRadius, _interactableLayerMask))
         {
-            if (hitInfo.transform.TryGetComponent(out IInteractable interaction))
+            DebugInteractionRay(ray, true, hitInfo);
+
+            IPlayerInteractable playerInteraction = hitInfo.transform.GetComponentInParent<IPlayerInteractable>();
+            if (playerInteraction != null)
             {
-                if (Input.GetKeyDown(KeyCode.E)/*Mouse.current.press.wasPressedThisFrame*/)
-                {
-                    interaction.Interact();
-                }
-                Highlight(true, 0);
+                HandleInteraction(playerInteraction as Component, playerInteraction, null);
+                Highlight(true);
+                return;
+            }
+
+            IInteractable interaction = hitInfo.transform.GetComponentInParent<IInteractable>();
+            if (interaction != null)
+            {
+                HandleInteraction(interaction as Component, null, interaction);
+                Highlight(true);
                 return;
             }
         }
-        Highlight(false, 0.1f);
+        else
+        {
+            DebugInteractionRay(ray, false, default);
+        }
+        Highlight(false);
     }
 
-    private void Highlight(bool value, float time = 0)
+    private void HandleInteraction(Component targetComponent, IPlayerInteractable playerInteraction, IInteractable interaction)
+    {
+        if (targetComponent == null)
+        {
+            ResetHoldInteraction();
+            return;
+        }
+
+        float requiredHoldTime = ResolveRequiredHoldTime(targetComponent);
+        if (requiredHoldTime <= 0f)
+        {
+            ResetHoldInteraction(null, false);
+            if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+                InvokeInteraction(playerInteraction, interaction);
+            return;
+        }
+
+        if (holdTarget != targetComponent)
+            ResetHoldInteraction(targetComponent, true);
+        else
+            SetInteractProgressVisible(true);
+
+        if (Keyboard.current == null || !Keyboard.current.eKey.isPressed)
+        {
+            ResetHoldInteraction(targetComponent, true);
+            return;
+        }
+
+        if (holdInteractionTriggered)
+        {
+            SetInteractTime(1f);
+            return;
+        }
+
+        holdElapsedTime += Time.deltaTime;
+        float progress = Mathf.Clamp01(holdElapsedTime / requiredHoldTime);
+        SetInteractTime(progress);
+
+        if (progress < 1f)
+            return;
+
+        holdInteractionTriggered = true;
+        InvokeInteraction(playerInteraction, interaction);
+    }
+
+    private static float ResolveRequiredHoldTime(Component targetComponent)
+    {
+        IHoldInteractable holdInteractable = targetComponent.GetComponentInParent<IHoldInteractable>();
+        return holdInteractable != null ? holdInteractable.RequiredHoldTime : 0f;
+    }
+
+    private void InvokeInteraction(IPlayerInteractable playerInteraction, IInteractable interaction)
+    {
+        if (playerInteraction != null)
+        {
+            playerInteraction.Interact(localPlayer);
+            return;
+        }
+
+        interaction?.Interact();
+    }
+
+    private void DebugInteractionRay(Ray ray, bool hasHit, RaycastHit hitInfo)
+    {
+        if (!_debugInteractionRay)
+            return;
+
+        Color rayColor = hasHit ? Color.green : Color.red;
+        Debug.DrawRay(ray.origin, ray.direction * _interactableRadius, rayColor);
+
+        if (Time.unscaledTime < nextInteractionRayDebugTime)
+            return;
+
+        nextInteractionRayDebugTime = Time.unscaledTime + 0.25f;
+
+        string cameraName = localCamera != null ? localCamera.name : "null";
+        string playerName = localPlayer != null ? localPlayer.name : "null";
+        if (!hasHit)
+        {
+            string unmaskedHit = TryGetUnmaskedHitDescription(ray);
+            Debug.Log($"ScreenManager InteractionRay: no masked hit. camera={cameraName}, player={playerName}, origin={ray.origin}, direction={ray.direction}, distance={_interactableRadius}, mask={_interactableLayerMask.value}, firstUnmaskedHit={unmaskedHit}.");
+            return;
+        }
+
+        Transform hitTransform = hitInfo.transform;
+        IPlayerInteractable playerInteraction = hitTransform.GetComponentInParent<IPlayerInteractable>();
+        IInteractable interaction = hitTransform.GetComponentInParent<IInteractable>();
+        string unmaskedFirstHit = TryGetUnmaskedHitDescription(ray);
+        Debug.Log($"ScreenManager InteractionRay: maskedHit={GetHitDescription(hitInfo)}, hasPlayerInteractable={playerInteraction != null}, hasInteractable={interaction != null}, camera={cameraName}, player={playerName}, mask={_interactableLayerMask.value}, firstUnmaskedHit={unmaskedFirstHit}.");
+    }
+
+    private string TryGetUnmaskedHitDescription(Ray ray)
+    {
+        if (!Physics.Raycast(ray, out RaycastHit anyHit, _interactableRadius, ~0))
+            return "none";
+
+        return GetHitDescription(anyHit);
+    }
+
+    private static string GetHitDescription(RaycastHit hitInfo)
+    {
+        Transform hitTransform = hitInfo.transform;
+        if (hitTransform == null)
+            return "null";
+
+        return $"{GetHierarchyPath(hitTransform)}, root={hitTransform.root.name}, layer={LayerMask.LayerToName(hitTransform.gameObject.layer)}({hitTransform.gameObject.layer}), distance={hitInfo.distance:F2}";
+    }
+
+    private static string GetHierarchyPath(Transform target)
+    {
+        if (target == null)
+            return "null";
+
+        string path = target.name;
+        Transform current = target.parent;
+        while (current != null)
+        {
+            path = current.name + "/" + path;
+            current = current.parent;
+        }
+
+        return path;
+    }
+
+    private void Highlight(bool value)
     {
         if (Manager.Instance == null || Manager.Instance.UIManager == null)
             return;
 
-        Manager.Instance.UIManager.SetInteractUI(value,time);
+        Manager.Instance.UIManager.SetInteractUI(value);
+
+        if (!value)
+            ResetHoldInteraction();
+    }
+
+    private void SetInteractTime(float amount)
+    {
+        if (Manager.Instance == null || Manager.Instance.UIManager == null)
+            return;
+
+        Manager.Instance.UIManager.SetInteractTime(amount);
+    }
+
+    private void SetInteractProgressVisible(bool value)
+    {
+        if (Manager.Instance == null || Manager.Instance.UIManager == null)
+            return;
+
+        Manager.Instance.UIManager.SetInteractProgressVisible(value);
+    }
+
+    private void ResetHoldInteraction(Component nextTarget = null, bool showProgress = false)
+    {
+        holdTarget = nextTarget;
+        holdElapsedTime = 0f;
+        holdInteractionTriggered = false;
+        SetInteractTime(0f);
+        SetInteractProgressVisible(showProgress);
     }
 
     public void ReverseRealCursorVisible()
@@ -123,11 +293,26 @@ public class ScreenManager : MonoBehaviour
             return true;
 
         if (localPlayer != null)
-            localCamera = localPlayer.GetComponentInChildren<Camera>(true);
+            localCamera = Camera.main;
 
         if (localCamera == null)
             localCamera = Camera.main;
 
         return localCamera != null && localCamera.isActiveAndEnabled;
+    }
+
+    private void ResolveLocalPlayer()
+    {
+        if (localPlayer != null)
+            return;
+
+        foreach (PlayerMovement player in PlayerRuntimeRegistry.Players)
+        {
+            if (player != null && player.IsLocalNetworkPlayer)
+            {
+                SetLocalPlayer(player);
+                return;
+            }
+        }
     }
 }

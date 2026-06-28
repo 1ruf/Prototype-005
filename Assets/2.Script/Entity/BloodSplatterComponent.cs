@@ -33,6 +33,7 @@ public sealed class BloodSplatterComponent : MonoBehaviour, INetworkEntityCompon
 
     private readonly Queue<GameObject> decals = new Queue<GameObject>(80);
     private GameObject owner;
+    private GameObject fallbackDecalPrefab;
     private Transform decalRoot;
 
     public GameObject Owner => owner != null ? owner : gameObject;
@@ -99,13 +100,37 @@ public sealed class BloodSplatterComponent : MonoBehaviour, INetworkEntityCompon
         }
     }
 
+    public void SpawnBloodOnSurface(int count, Vector3 surfacePoint, Vector3 surfaceNormal)
+    {
+        if (count <= 0)
+            return;
+
+        EnsureRoot();
+
+        Vector3 safeNormal = surfaceNormal.sqrMagnitude > 0.001f ? surfaceNormal.normalized : Vector3.up;
+        Vector2 sizeRange = IsWallLike(safeNormal) ? wallSizeRange : floorSizeRange;
+        int clampedCount = Mathf.Clamp(count, 1, Mathf.Max(1, maxDecals));
+
+        for (int i = 0; i < clampedCount; i++)
+        {
+            Vector3 tangent = Vector3.Cross(safeNormal, Vector3.up);
+            if (tangent.sqrMagnitude <= 0.001f)
+                tangent = Vector3.Cross(safeNormal, Vector3.right);
+
+            tangent.Normalize();
+            Vector3 bitangent = Vector3.Cross(safeNormal, tangent).normalized;
+            Vector2 offset = Random.insideUnitCircle * 0.08f;
+            CreateDecal(surfacePoint + tangent * offset.x + bitangent * offset.y, safeNormal, sizeRange);
+        }
+    }
+
     public void ClearBlood()
     {
         while (decals.Count > 0)
         {
             GameObject decal = decals.Dequeue();
             if (decal != null)
-                Destroy(decal);
+                GameObjectPoolManager.Despawn(decal);
         }
     }
 
@@ -143,15 +168,29 @@ public sealed class BloodSplatterComponent : MonoBehaviour, INetworkEntityCompon
 
     private void CreateDecal(RaycastHit hit, Vector2 sizeRange)
     {
-        GameObject prefab = GetRandomBloodPrefab();
-        GameObject decal = prefab != null
-            ? Instantiate(prefab, decalRoot)
-            : GameObject.CreatePrimitive(PrimitiveType.Quad);
+        CreateDecal(hit.point, hit.normal, sizeRange);
+    }
 
-        decal.name = prefab != null ? prefab.name : "BloodSplatter";
+    private void CreateDecal(Vector3 point, Vector3 normal, Vector2 sizeRange)
+    {
+        GameObject prefab = GetRandomBloodPrefab();
+        bool usesConfiguredPrefab = prefab != null;
+        if (prefab == null)
+            prefab = GetOrCreateFallbackDecalPrefab();
+
+        GameObject decal = GameObjectPoolManager.Spawn(
+            prefab,
+            point + normal.normalized * surfaceOffset,
+            CreateSurfaceRotation(normal, usesConfiguredPrefab),
+            decalRoot);
+
+        if (decal == null)
+            return;
+
+        decal.name = prefab.name;
         decal.transform.SetParent(decalRoot, true);
-        decal.transform.position = hit.point + hit.normal * surfaceOffset;
-        decal.transform.rotation = CreateSurfaceRotation(hit.normal, prefab != null);
+        decal.transform.position = point + normal.normalized * surfaceOffset;
+        decal.transform.rotation = CreateSurfaceRotation(normal, usesConfiguredPrefab);
 
         float size = Random.Range(sizeRange.x, sizeRange.y);
         decal.transform.localScale = Vector3.one * size;
@@ -165,7 +204,7 @@ public sealed class BloodSplatterComponent : MonoBehaviour, INetworkEntityCompon
         {
             GameObject old = decals.Dequeue();
             if (old != null)
-                Destroy(old);
+                GameObjectPoolManager.Despawn(old);
         }
     }
 
@@ -177,6 +216,24 @@ public sealed class BloodSplatterComponent : MonoBehaviour, INetworkEntityCompon
         GameObject root = new GameObject("BloodSplatterDecals");
         root.transform.SetParent(null, true);
         decalRoot = root.transform;
+    }
+
+    private GameObject GetOrCreateFallbackDecalPrefab()
+    {
+        if (fallbackDecalPrefab != null)
+            return fallbackDecalPrefab;
+
+        fallbackDecalPrefab = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        fallbackDecalPrefab.name = "BloodSplatter";
+        fallbackDecalPrefab.SetActive(false);
+
+        Collider collider = fallbackDecalPrefab.GetComponent<Collider>();
+        if (collider != null)
+            collider.enabled = false;
+
+        EnsureRoot();
+        fallbackDecalPrefab.transform.SetParent(decalRoot, false);
+        return fallbackDecalPrefab;
     }
 
     private Quaternion CreateSurfaceRotation(Vector3 normal, bool usesPrefab)

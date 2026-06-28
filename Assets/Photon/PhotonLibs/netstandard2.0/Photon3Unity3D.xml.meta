@@ -2,15 +2,15 @@ fileFormatVersion: 2
 guid: 7015e500cd5b71244af56448dfb59804
 labels:
 - FusionCodeDoc
+AssetOrigin:
+  serializedVersion: 1
+  productId: 130518
+  packageName: Photon Voice 2
+  packageVersion: 2.63
+  assetPath: Assets/Photon/PhotonLibs/netstandard2.0/Photon3Unity3D.xml
+  uploadId: 868348
 TextScriptImporter:
   externalObjects: {}
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 267958
-  packageName: Photon Fusion
-  packageVersion: 2.0.12
-  assetPath: Assets/Photon/PhotonLibs/netstandard2.0/Photon3Unity3D.xml
-  uploadId: 888248

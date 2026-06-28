@@ -170,6 +170,7 @@ GameObject:
   - component: {fileID: 496853950156818510}
   - component: {fileID: 2701349218357061427}
   - component: {fileID: 5751811274935554919}
+  - component: {fileID: 4102460444499025621}
   m_Layer: 0
   m_Name: HeadmanVisual
   m_TagString: Untagged
@@ -231,6 +232,7 @@ MonoBehaviour:
   enemy: {fileID: 4305796534357137275}
   audios:
   - {fileID: 5751811274935554919}
+  duplicateAudioEventLockout: 0.25
 --- !u!82 &5751811274935554919
 AudioSource:
   m_ObjectHideFlags: 0
@@ -328,6 +330,29 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!164 &4102460444499025621
+AudioReverbFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1382906309526247762}
+  m_Enabled: 1
+  m_DryLevel: 0
+  m_Room: -1000
+  m_RoomHF: -300
+  m_DecayTime: 1.49
+  m_DecayHFRatio: 0.59
+  m_ReflectionsLevel: -1219
+  m_ReverbLevel: 441
+  m_ReverbDelay: 0.011
+  m_Diffusion: 100
+  m_Density: 100
+  m_HFReference: 5000
+  m_RoomLF: 0
+  m_LFReference: 250
+  m_ReflectionsDelay: 0
+  m_ReverbPreset: 13
 --- !u!1 &1536776794402507444
 GameObject:
   m_ObjectHideFlags: 0
@@ -787,6 +812,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2921901062360339827}
   - component: {fileID: 2892940171711035675}
+  - component: {fileID: 7211081394498544588}
   m_Layer: 0
   m_Name: HeadmanSound
   m_TagString: Untagged
@@ -823,17 +849,17 @@ AudioSource:
   m_Resource: {fileID: 8300000, guid: 21ac41f86eb8e0c4391b9bcee224763d, type: 3}
   m_PlayOnAwake: 1
   m_Volume: 1
-  m_Pitch: -0.25
+  m_Pitch: -0.3
   Loop: 1
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
   Priority: 149
   DopplerLevel: 1
-  MinDistance: 5.790653
-  MaxDistance: 21.158184
+  MinDistance: 1
+  MaxDistance: 20
   Pan2D: 0
-  rolloffMode: 0
+  rolloffMode: 2
   BypassEffects: 0
   BypassListenerEffects: 0
   BypassReverbZones: 0
@@ -841,23 +867,59 @@ AudioSource:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
-      time: 0
+      time: 0.05
       value: 1
-      inSlope: 0
-      outSlope: 0
+      inSlope: -8.094126
+      outSlope: -8.094126
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
+      inWeight: 0
+      outWeight: 0.35777867
+    - serializedVersion: 3
+      time: 0.138414
+      value: 0.50354004
+      inSlope: -5.0019917
+      outSlope: -5.0019917
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.21680756
+      value: 0.25
+      inSlope: -1.2504979
+      outSlope: -1.2504979
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.4
+      value: 0.125
+      inSlope: -0.31262448
+      outSlope: -0.31262448
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.8
+      value: 0.0625
+      inSlope: -0.07815612
+      outSlope: -0.07815612
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
     - serializedVersion: 3
       time: 1
-      value: 0
-      inSlope: 0
-      outSlope: 0
+      value: 0.05
+      inSlope: -0.05001994
+      outSlope: -0.05001994
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
+      inWeight: 0
+      outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
@@ -906,6 +968,29 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!164 &7211081394498544588
+AudioReverbFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5689649480961628494}
+  m_Enabled: 1
+  m_DryLevel: 0
+  m_Room: -1000
+  m_RoomHF: -300
+  m_DecayTime: 1.49
+  m_DecayHFRatio: 0.59
+  m_ReflectionsLevel: -1219
+  m_ReverbLevel: 441
+  m_ReverbDelay: 0.011
+  m_Diffusion: 100
+  m_Density: 100
+  m_HFReference: 5000
+  m_RoomLF: 0
+  m_LFReference: 250
+  m_ReflectionsDelay: 0
+  m_ReverbPreset: 13
 --- !u!1 &5811004364283745590
 GameObject:
   m_ObjectHideFlags: 0
@@ -1611,7 +1696,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2069374400006040959
 Transform:
   m_ObjectHideFlags: 0
@@ -1692,11 +1777,15 @@ MonoBehaviour:
   enemySeparationStrength: 5.5
   enemySeparationMaxForce: 3.5
   navMeshSnapDistance: 12
+  chaseNavMeshSampleDistance: 1.2
+  chaseTargetBackoffDistance: 3
+  chaseTargetBackoffStep: 0.35
+  preferUnclaimedChaseTargets: 1
+  targetClaimSwitchDistance: 1.5
   attackDamage: 100
   attackAnimationDuration: 0.8
   killAnimationDuration: 10
-  killKnockbackForce: 45
-  killKnockbackUpwardForce: 25
+  killKnockbackUpwardForce: 5
 --- !u!114 &6124938067429813641
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1763,10 +1852,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 2
-  m_Height: 2
+  m_Radius: 0.8
+  m_Height: 0.8
   m_Direction: 0
-  m_Center: {x: -0.0004940033, y: 1.5051805, z: 0.71}
+  m_Center: {x: 0, y: 0.41, z: 0.48000002}
 --- !u!114 &8511879852155342824
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -7,6 +7,8 @@ public class RagdollPartComponent : MonoBehaviour
     [SerializeField] private Rigidbody partRigidbody;
     [SerializeField] private Collider partCollider;
 
+    private RagdollEntityComponent owner;
+
     public Rigidbody Rigidbody => partRigidbody;
     public Collider Collider => partCollider;
 
@@ -22,6 +24,9 @@ public class RagdollPartComponent : MonoBehaviour
 
         if (partCollider == null)
             partCollider = GetComponent<Collider>();
+
+        if (owner == null)
+            owner = GetComponentInParent<RagdollEntityComponent>();
     }
 
     public void SetRagdollActive(bool active)
@@ -42,5 +47,36 @@ public class RagdollPartComponent : MonoBehaviour
             partRigidbody.linearVelocity = Vector3.zero;
             partRigidbody.angularVelocity = Vector3.zero;
         }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        NotifySurfaceContact(collision);
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        NotifySurfaceExit(collision);
+    }
+
+    private void NotifySurfaceContact(Collision collision)
+    {
+        CacheComponents();
+
+        if (owner == null || collision == null || collision.contactCount <= 0)
+            return;
+
+        ContactPoint contact = collision.GetContact(0);
+        owner.NotifyRagdollSurfaceContact(this, contact.point, contact.normal, collision.gameObject.layer);
+    }
+
+    private void NotifySurfaceExit(Collision collision)
+    {
+        CacheComponents();
+
+        if (owner == null || collision == null)
+            return;
+
+        owner.NotifyRagdollSurfaceExit(this, collision.gameObject.layer);
     }
 }

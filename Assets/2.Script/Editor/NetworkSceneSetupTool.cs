@@ -1,6 +1,9 @@
 ﻿#if UNITY_EDITOR
 using Fusion;
 using Fusion.Editor;
+using Photon.Voice.Fusion;
+using Photon.Voice.Unity;
+using Photon.Voice.Unity.UtilityScripts;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditorInternal;
@@ -87,6 +90,9 @@ public static class NetworkSceneSetupTool
             MissingPlayerAnimationSetup(playerPrefab) ||
             MissingPlayerComponentOrganization(playerPrefab) ||
             !HasComponentByTypeName(playerPrefab, "CameraShakeController") ||
+            playerPrefab.GetComponentInChildren<VoiceNetworkObject>(true) == null ||
+            playerPrefab.GetComponentInChildren<NetworkPlayerVoiceComponent>(true) == null ||
+            playerPrefab.GetComponentInChildren<Speaker>(true) == null ||
             playerPrefab.GetComponentInChildren<NetworkHealthComponent>(true) == null ||
             playerPrefab.GetComponentInChildren<NetworkDeathComponent>(true) == null ||
             playerPrefab.GetComponentInChildren<RagdollEntityComponent>(true) == null ||
@@ -176,6 +182,7 @@ public static class NetworkSceneSetupTool
         EnsurePlayerComponentOrganization(clone);
         EnsurePlayerAnimationSetup(clone);
         EnsureCameraShakeSetup(clone);
+        EnsurePlayerVoiceSetup(clone);
         EnsureNetworkEntitySetup(clone);
         EnsureRagdollSetup(clone);
 
@@ -214,15 +221,69 @@ public static class NetworkSceneSetupTool
         EnsureComponent<NetworkRunner>(manager.gameObject);
         EnsureComponent<NetworkSceneManagerDefault>(manager.gameObject);
         EnsureComponent<NetworkObjectProviderDefault>(manager.gameObject);
+        EnsureVoiceManagerSetup(manager.gameObject);
 
         SerializedObject serializedManager = new SerializedObject(manager);
         serializedManager.FindProperty("playerPrefab").objectReferenceValue = playerPrefab;
         serializedManager.FindProperty("enemyPrefab").objectReferenceValue = enemyPrefab;
         serializedManager.FindProperty("sessionName").stringValue = "Prototype005";
-        serializedManager.FindProperty("enemyCountPerPlayer").floatValue = 1.5f;
+        SerializedProperty enemyDifficulty = serializedManager.FindProperty("enemySpawnDifficulty");
+        if (enemyDifficulty != null)
+            enemyDifficulty.enumValueIndex = 2;
         serializedManager.ApplyModifiedPropertiesWithoutUndo();
 
         return manager;
+    }
+
+    private static void EnsureVoiceManagerSetup(GameObject managerObject)
+    {
+        Recorder recorder = managerObject.GetComponentInChildren<Recorder>(true);
+        if (recorder == null)
+            recorder = managerObject.AddComponent<Recorder>();
+
+        FusionVoiceClient voiceClient = EnsureComponent<FusionVoiceClient>(managerObject);
+        VoiceChatManager voiceChatManager = EnsureComponent<VoiceChatManager>(managerObject);
+        VoiceChatDiagnostics diagnostics = EnsureComponent<VoiceChatDiagnostics>(managerObject);
+        MicAmplifier amplifier = recorder.GetComponent<MicAmplifier>();
+        if (amplifier == null)
+            amplifier = recorder.gameObject.AddComponent<MicAmplifier>();
+
+        if (recorder.GetComponent<MicrophonePermission>() == null)
+            recorder.gameObject.AddComponent<MicrophonePermission>();
+
+        recorder.SourceType = Recorder.InputSourceType.Microphone;
+        recorder.MicrophoneType = Recorder.MicType.Unity;
+        recorder.RecordWhenJoined = true;
+        recorder.RecordingEnabled = true;
+        recorder.VoiceDetection = false;
+        recorder.TransmitEnabled = false;
+        recorder.InterestGroup = 0;
+        amplifier.AmplificationFactor = 1f;
+
+        voiceClient.PrimaryRecorder = recorder;
+        voiceClient.UseFusionAppSettings = true;
+        voiceClient.UseFusionAuthValues = true;
+
+        SerializedObject serializedVoiceClient = new SerializedObject(voiceClient);
+        SerializedProperty usePrimaryRecorder = serializedVoiceClient.FindProperty("usePrimaryRecorder");
+        if (usePrimaryRecorder != null)
+            usePrimaryRecorder.boolValue = false;
+        serializedVoiceClient.ApplyModifiedPropertiesWithoutUndo();
+
+        SerializedObject serializedManager = new SerializedObject(voiceChatManager);
+        SetObjectReference(serializedManager, "voiceClient", voiceClient);
+        SetObjectReference(serializedManager, "recorder", recorder);
+        SetObjectReference(serializedManager, "micAmplifier", amplifier);
+        SerializedProperty logVoiceStateChanges = serializedManager.FindProperty("logVoiceStateChanges");
+        if (logVoiceStateChanges != null)
+            logVoiceStateChanges.boolValue = true;
+        serializedManager.ApplyModifiedPropertiesWithoutUndo();
+
+        SerializedObject serializedDiagnostics = new SerializedObject(diagnostics);
+        SetObjectReference(serializedDiagnostics, "runner", managerObject.GetComponent<NetworkRunner>());
+        SetObjectReference(serializedDiagnostics, "voiceClient", voiceClient);
+        SetObjectReference(serializedDiagnostics, "recorder", recorder);
+        serializedDiagnostics.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static T EnsureComponent<T>(GameObject gameObject) where T : Component
@@ -283,30 +344,40 @@ public static class NetworkSceneSetupTool
         if (cameraRoot == null)
             return;
 
-        Camera mainCamera = cameraRoot.GetComponentInChildren<Camera>(true);
-        if (mainCamera == null)
+        Camera[] playerCameras = cameraRoot.GetComponentsInChildren<Camera>(true);
+        foreach (Camera playerCamera in playerCameras)
         {
-            GameObject mainCameraObject = new GameObject("Main Camera");
-            mainCameraObject.transform.SetParent(cameraRoot, false);
-            mainCameraObject.tag = "MainCamera";
-            mainCamera = mainCameraObject.AddComponent<Camera>();
-            mainCameraObject.AddComponent<AudioListener>();
-        }
+            if (playerCamera == null)
+                continue;
 
-        if (mainCamera != null)
-        {
-            EnsureComponentByTypeName(mainCamera.gameObject, "Unity.Cinemachine.CinemachineBrain");
+            playerCamera.gameObject.tag = "Untagged";
+            playerCamera.enabled = false;
 
-            PlayerMovement movement = player.GetComponent<PlayerMovement>();
-            if (movement != null)
+            AudioListener listener = playerCamera.GetComponent<AudioListener>();
+            if (listener != null)
+                listener.enabled = false;
+
+            System.Type brainType = System.Type.GetType("Unity.Cinemachine.CinemachineBrain, Unity.Cinemachine");
+            if (brainType != null)
             {
-                SerializedObject serializedMovement = new SerializedObject(movement);
-                serializedMovement.FindProperty("_playerCamera").objectReferenceValue = mainCamera;
-                serializedMovement.ApplyModifiedPropertiesWithoutUndo();
+                Component brain = playerCamera.GetComponent(brainType);
+                if (brain is UnityEngine.Behaviour brainBehaviour)
+                    brainBehaviour.enabled = false;
             }
         }
 
+        PlayerMovement movement = player.GetComponent<PlayerMovement>();
+        if (movement != null)
+        {
+            SerializedObject serializedMovement = new SerializedObject(movement);
+            serializedMovement.FindProperty("_playerCamera").objectReferenceValue = null;
+            serializedMovement.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         Component cinemachineCamera = EnsureComponentByTypeName(cameraRoot.gameObject, "Unity.Cinemachine.CinemachineCamera");
+        if (cinemachineCamera is UnityEngine.Behaviour cinemachineBehaviour)
+            cinemachineBehaviour.enabled = false;
+
         Component noise = EnsureComponentByTypeName(cameraRoot.gameObject, "Unity.Cinemachine.CinemachineBasicMultiChannelPerlin");
         if (noise != null)
         {
@@ -322,20 +393,25 @@ public static class NetworkSceneSetupTool
         Component shakeController = EnsureComponentByTypeName(cameraRoot.gameObject, "CameraShakeController");
         if (shakeController != null)
         {
+            if (shakeController is UnityEngine.Behaviour shakeBehaviour)
+                shakeBehaviour.enabled = false;
+
             SerializedObject serializedShake = new SerializedObject(shakeController);
             serializedShake.FindProperty("noise").objectReferenceValue = noise;
             serializedShake.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        EnsureComponentByTypeName(cameraRoot.gameObject, "CameraBobbingController");
+        Component bobbingController = EnsureComponentByTypeName(cameraRoot.gameObject, "CameraBobbingController");
+        if (bobbingController is UnityEngine.Behaviour bobbingBehaviour)
+            bobbingBehaviour.enabled = false;
 
-        if (cinemachineCamera != null && mainCamera != null)
+        if (cinemachineCamera != null)
         {
             SerializedObject serializedCamera = new SerializedObject(cinemachineCamera);
             SerializedProperty lens = serializedCamera.FindProperty("Lens");
             SerializedProperty fieldOfView = lens?.FindPropertyRelative("FieldOfView");
             if (fieldOfView != null)
-                fieldOfView.floatValue = mainCamera.fieldOfView;
+                fieldOfView.floatValue = 60f;
             serializedCamera.ApplyModifiedPropertiesWithoutUndo();
         }
     }
@@ -378,6 +454,91 @@ public static class NetworkSceneSetupTool
         serializedRagdoll.ApplyModifiedPropertiesWithoutUndo();
 
         ragdoll.Initialize(player);
+    }
+
+    private static void EnsurePlayerVoiceSetup(GameObject player)
+    {
+        VoiceNetworkObject voiceNetworkObject = EnsureComponent<VoiceNetworkObject>(player);
+        NetworkPlayerVoiceComponent playerVoice = EnsureComponent<NetworkPlayerVoiceComponent>(player);
+
+        Transform anchorParent = FindChildByName(player.transform, "mixamorig:Head");
+        if (anchorParent == null)
+            anchorParent = player.transform;
+
+        Transform voiceAnchor = anchorParent.Find("VoiceAnchor");
+        if (voiceAnchor == null)
+        {
+            voiceAnchor = new GameObject("VoiceAnchor").transform;
+            voiceAnchor.SetParent(anchorParent, false);
+        }
+
+        voiceAnchor.localPosition = Vector3.zero;
+        voiceAnchor.localRotation = Quaternion.identity;
+        voiceAnchor.localScale = Vector3.one;
+
+        Transform speakerTransform = voiceAnchor.Find("Speaker");
+        if (speakerTransform == null)
+        {
+            speakerTransform = new GameObject("Speaker").transform;
+            speakerTransform.SetParent(voiceAnchor, false);
+        }
+
+        speakerTransform.localPosition = Vector3.zero;
+        speakerTransform.localRotation = Quaternion.identity;
+        speakerTransform.localScale = Vector3.one;
+
+        AudioSource audioSource = EnsureComponent<AudioSource>(speakerTransform.gameObject);
+        Speaker speaker = EnsureComponent<Speaker>(speakerTransform.gameObject);
+        ConfigureVoiceAudioSource(audioSource);
+
+        SerializedObject serializedPlayerVoice = new SerializedObject(playerVoice);
+        SetObjectReference(serializedPlayerVoice, "voiceAnchor", voiceAnchor);
+        SetObjectReference(serializedPlayerVoice, "voiceNetworkObject", voiceNetworkObject);
+        SetObjectReference(serializedPlayerVoice, "speaker", speaker);
+        SetObjectReference(serializedPlayerVoice, "speakerAudioSource", audioSource);
+        SerializedProperty minDistance = serializedPlayerVoice.FindProperty("minDistance");
+        if (minDistance != null)
+            minDistance.floatValue = 1.5f;
+        SerializedProperty maxDistance = serializedPlayerVoice.FindProperty("maxDistance");
+        if (maxDistance != null)
+            maxDistance.floatValue = 50f;
+        serializedPlayerVoice.ApplyModifiedPropertiesWithoutUndo();
+
+        EnsureNetworkBehaviourRegistered(player.GetComponent<NetworkObject>(), voiceNetworkObject);
+    }
+
+    private static void ConfigureVoiceAudioSource(AudioSource audioSource)
+    {
+        if (audioSource == null)
+            return;
+
+        audioSource.playOnAwake = true;
+        audioSource.volume = 1f;
+        audioSource.spatialBlend = 1f;
+        audioSource.rolloffMode = AudioRolloffMode.Logarithmic;
+        audioSource.minDistance = 1.5f;
+        audioSource.maxDistance = 50f;
+    }
+
+    private static void EnsureNetworkBehaviourRegistered(NetworkObject networkObject, NetworkBehaviour behaviour)
+    {
+        if (networkObject == null || behaviour == null)
+            return;
+
+        SerializedObject serializedObject = new SerializedObject(networkObject);
+        SerializedProperty behaviours = serializedObject.FindProperty("NetworkedBehaviours");
+        if (behaviours == null)
+            return;
+
+        for (int i = 0; i < behaviours.arraySize; i++)
+        {
+            if (behaviours.GetArrayElementAtIndex(i).objectReferenceValue == behaviour)
+                return;
+        }
+
+        behaviours.InsertArrayElementAtIndex(behaviours.arraySize);
+        behaviours.GetArrayElementAtIndex(behaviours.arraySize - 1).objectReferenceValue = behaviour;
+        serializedObject.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static void EnsureNetworkEntitySetup(GameObject player)
@@ -453,6 +614,13 @@ public static class NetworkSceneSetupTool
         property.arraySize = objects.Count;
         for (int i = 0; i < objects.Count; i++)
             property.GetArrayElementAtIndex(i).objectReferenceValue = objects[i];
+    }
+
+    private static void SetObjectReference(SerializedObject serializedObject, string propertyName, Object value)
+    {
+        SerializedProperty property = serializedObject.FindProperty(propertyName);
+        if (property != null)
+            property.objectReferenceValue = value;
     }
 
     private static Component EnsureComponentByTypeName(GameObject gameObject, string typeName)

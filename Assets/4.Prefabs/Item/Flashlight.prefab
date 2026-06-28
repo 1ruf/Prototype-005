@@ -186,7 +186,7 @@ MonoBehaviour:
   runSwayPitch: 6
   runSwayYaw: 0
   runSwayRoll: 0
-  runSwayFrequency: 12
+  runSwayFrequency: 6
   walkSwayMultiplier: 0.45
   thirdPersonLookPitchMultiplier: 0
 --- !u!136 &2376807879390504767
