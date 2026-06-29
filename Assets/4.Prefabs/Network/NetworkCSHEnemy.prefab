@@ -1696,7 +1696,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &2069374400006040959
 Transform:
   m_ObjectHideFlags: 0
@@ -1786,6 +1786,13 @@ MonoBehaviour:
   attackAnimationDuration: 0.8
   killAnimationDuration: 10
   killKnockbackUpwardForce: 5
+  chaseDoorBreakMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  chaseDoorBreakDistance: 1.8
+  chaseDoorBreakRadius: 0.65
+  chaseDoorBreakHeight: 1.1
+  chaseDoorBreakCooldown: 0.5
 --- !u!114 &6124938067429813641
 MonoBehaviour:
   m_ObjectHideFlags: 0

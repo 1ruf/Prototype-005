@@ -6378,7 +6378,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   requiredItem: {fileID: 11400000, guid: 14d754aafd9c18b489eb026d0fb6e835, type: 2}
   useDistance: 3
-  requiredHoldTime: 1
+  requiredHoldTime: 3
   consumeItem: 1
   _IsResolved:
     _value: 0
@@ -23400,7 +23400,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   requiredItem: {fileID: 11400000, guid: 14d754aafd9c18b489eb026d0fb6e835, type: 2}
   useDistance: 3
-  requiredHoldTime: 1
+  requiredHoldTime: 3
   consumeItem: 1
   _IsResolved:
     _value: 0
