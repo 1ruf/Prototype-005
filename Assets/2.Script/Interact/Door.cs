@@ -4,24 +4,29 @@ using DG.Tweening;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(NetworkObject))]
-public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILockable, IUnlockable, IHoldInteractable
+public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILockable, IUnlockable, IHoldInteractable, IInteractionFailureProvider
 {
     [SerializeField] private Vector3 closedRotation = Vector3.zero;
     [SerializeField] private Vector3 openRotation = new Vector3(0, 120, 0);
+    [SerializeField] private bool invertPlayerSideOpenDirection;
     [SerializeField] private float tweenDuration = 3f;
     [SerializeField] private float requiredHoldTime;
     [SerializeField] private Transform breakPhysicsTarget;
-    [SerializeField] private float breakForce = 8f;
-    [SerializeField] private float breakUpwardForce = 1.5f;
+    [SerializeField] private float breakForce = 2f;
+    [SerializeField] private float breakUpwardForce = 0.35f;
+    [SerializeField] private float brokenDestroyDelay = 10f;
 
     [Networked] public NetworkBool IsOpenState { get; private set; }
     [Networked] public NetworkBool IsLockedState { get; private set; }
     [Networked] public NetworkBool IsBrokenState { get; private set; }
+    [Networked] private Vector3 NetworkOpenRotation { get; set; }
     [Networked] private Vector3 BreakImpulse { get; set; }
 
     private bool hasAppliedVisualState;
     private bool hasAppliedBrokenState;
     private bool visualOpen;
+    private Vector3 visualOpenRotation;
+    private Vector3 localOpenRotation;
     private bool localLocked;
     private bool localBroken;
     private Collider[] cachedColliders;
@@ -55,7 +60,28 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
 
     public void Interact(PlayerMovement player)
     {
-        Interact();
+        if (IsLocked || IsBroken)
+            return;
+
+        RequestSetOpen(!IsOpen, player);
+    }
+
+    public bool TryGetInteractionFailureMessage(PlayerMovement player, out string message)
+    {
+        if (IsBroken)
+        {
+            message = "This door is broken.";
+            return true;
+        }
+
+        if (IsLocked)
+        {
+            message = "This door is locked.";
+            return true;
+        }
+
+        message = null;
+        return false;
     }
 
     public void Close()
@@ -75,6 +101,11 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
 
     public void RequestSetOpen(bool open)
     {
+        RequestSetOpen(open, null);
+    }
+
+    private void RequestSetOpen(bool open, PlayerMovement player)
+    {
         if (IsBroken)
             return;
 
@@ -83,17 +114,21 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
             if (localLocked && open)
                 return;
 
+            if (open)
+                localOpenRotation = ResolveOpenRotation(player);
+
             ApplyVisualState(open, true);
             return;
         }
 
+        Vector3 requestedOpenRotation = open ? ResolveOpenRotation(player) : GetActiveOpenRotation();
         if (Object.HasStateAuthority)
         {
-            SetOpenStateAuthority(open);
+            SetOpenStateAuthority(open, requestedOpenRotation);
             return;
         }
 
-        RPC_RequestSetOpen(open);
+        RPC_RequestSetOpen(open, requestedOpenRotation);
     }
 
     public void RequestSetLocked(bool locked)
@@ -143,9 +178,9 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_RequestSetOpen(NetworkBool open)
+    private void RPC_RequestSetOpen(NetworkBool open, Vector3 requestedOpenRotation)
     {
-        SetOpenStateAuthority(open);
+        SetOpenStateAuthority(open, requestedOpenRotation);
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
@@ -160,7 +195,7 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
         BreakStateAuthority(direction);
     }
 
-    private void SetOpenStateAuthority(bool open)
+    private void SetOpenStateAuthority(bool open, Vector3 requestedOpenRotation)
     {
         if (IsBrokenState)
             return;
@@ -170,6 +205,9 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
 
         if (IsOpenState == open)
             return;
+
+        if (open)
+            NetworkOpenRotation = requestedOpenRotation;
 
         IsOpenState = open;
         ApplyVisualState(open, true);
@@ -187,7 +225,7 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
         ApplyLockedState(locked);
 
         if (locked)
-            SetOpenStateAuthority(false);
+            SetOpenStateAuthority(false, GetActiveOpenRotation());
     }
 
     private void ApplyLockedState(bool locked)
@@ -211,22 +249,78 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
         if (IsBroken)
             return;
 
-        if (hasAppliedVisualState && visualOpen == open)
+        Vector3 targetRotation = open ? GetActiveOpenRotation() : closedRotation;
+        if (hasAppliedVisualState && visualOpen == open && (!open || ApproximatelyEuler(visualOpenRotation, targetRotation)))
             return;
 
         hasAppliedVisualState = true;
         visualOpen = open;
+        if (open)
+            visualOpenRotation = targetRotation;
 
-        Vector3 targetRotation = open ? openRotation : closedRotation;
         transform.DOKill();
 
         if (animate && tweenDuration > 0f)
         {
-            transform.DORotate(targetRotation, tweenDuration);
+            transform.DOLocalRotate(targetRotation, tweenDuration);
             return;
         }
 
-        transform.eulerAngles = targetRotation;
+        transform.localEulerAngles = targetRotation;
+    }
+
+    private Vector3 ResolveOpenRotation(PlayerMovement player)
+    {
+        if (player == null)
+            return openRotation;
+
+        Vector3 closedForward = ResolveClosedWorldForward();
+        Vector3 playerOffset = player.transform.position - transform.position;
+        playerOffset.y = 0f;
+
+        if (playerOffset.sqrMagnitude <= 0.0001f)
+            return openRotation;
+
+        float side = Vector3.Dot(closedForward, playerOffset.normalized);
+        if (Mathf.Abs(side) <= 0.0001f)
+            return openRotation;
+
+        float direction = side > 0f ? -1f : 1f;
+        if (invertPlayerSideOpenDirection)
+            direction *= -1f;
+
+        Vector3 resolvedRotation = openRotation;
+        resolvedRotation.y = Mathf.Abs(openRotation.y) * direction;
+        return resolvedRotation;
+    }
+
+    private Vector3 ResolveClosedWorldForward()
+    {
+        Quaternion closedLocalRotation = Quaternion.Euler(closedRotation);
+        Vector3 localForward = closedLocalRotation * Vector3.forward;
+        Vector3 worldForward = transform.parent != null ? transform.parent.TransformDirection(localForward) : localForward;
+        worldForward.y = 0f;
+
+        if (worldForward.sqrMagnitude <= 0.0001f)
+            worldForward = transform.forward;
+
+        worldForward.y = 0f;
+        return worldForward.sqrMagnitude > 0.0001f ? worldForward.normalized : Vector3.forward;
+    }
+
+    private Vector3 GetActiveOpenRotation()
+    {
+        if (Object != null)
+            return NetworkOpenRotation.sqrMagnitude > 0.0001f ? NetworkOpenRotation : openRotation;
+
+        return localOpenRotation.sqrMagnitude > 0.0001f ? localOpenRotation : openRotation;
+    }
+
+    private static bool ApproximatelyEuler(Vector3 a, Vector3 b)
+    {
+        return Mathf.Abs(Mathf.DeltaAngle(a.x, b.x)) <= 0.01f
+            && Mathf.Abs(Mathf.DeltaAngle(a.y, b.y)) <= 0.01f
+            && Mathf.Abs(Mathf.DeltaAngle(a.z, b.z)) <= 0.01f;
     }
 
     private void ApplyBrokenLocal(Vector3 direction)
@@ -254,11 +348,12 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
 
         hasAppliedBrokenState = true;
         transform.DOKill();
-        SetDoorCollidersEnabled(false);
 
         Transform physicsTarget = ResolveBreakPhysicsTarget();
         if (physicsTarget == null)
             return;
+
+        SetBlockingCollidersEnabled(false, physicsTarget);
 
         Rigidbody body = physicsTarget.GetComponent<Rigidbody>();
         if (body == null)
@@ -266,8 +361,12 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
 
         body.isKinematic = false;
         body.useGravity = true;
+        body.collisionDetectionMode = CollisionDetectionMode.Continuous;
         body.AddForce(impulse, ForceMode.Impulse);
         body.AddTorque(Vector3.Cross(Vector3.up, impulse.normalized) * breakForce, ForceMode.Impulse);
+
+        if (brokenDestroyDelay > 0f && physicsTarget != transform)
+            Destroy(physicsTarget.gameObject, brokenDestroyDelay);
     }
 
     private Transform ResolveBreakPhysicsTarget()
@@ -278,15 +377,20 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
         return transform.childCount > 0 ? transform.GetChild(0) : transform;
     }
 
-    private void SetDoorCollidersEnabled(bool enabled)
+    private void SetBlockingCollidersEnabled(bool enabled, Transform physicsTarget)
     {
         if (cachedColliders == null || cachedColliders.Length == 0)
             cachedColliders = GetComponentsInChildren<Collider>(true);
 
         foreach (Collider doorCollider in cachedColliders)
         {
-            if (doorCollider != null)
-                doorCollider.enabled = enabled;
+            if (doorCollider == null)
+                continue;
+
+            if (physicsTarget != null && doorCollider.transform.IsChildOf(physicsTarget))
+                continue;
+
+            doorCollider.enabled = enabled;
         }
     }
 }

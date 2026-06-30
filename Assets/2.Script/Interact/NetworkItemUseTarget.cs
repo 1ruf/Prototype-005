@@ -3,7 +3,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(NetworkObject))]
-public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IPlayerInteractable, IHoldInteractable
+public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IPlayerInteractable, IHoldInteractable, IInteractionFailureProvider
 {
     [SerializeField] private PlayerItemSO requiredItem;
     [SerializeField] private float useDistance = 3f;
@@ -65,6 +65,55 @@ public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IP
             return false;
 
         return inventory.HasItem(RequiredItemId, 1);
+    }
+
+    public bool TryGetInteractionFailureMessage(PlayerMovement player, out string message)
+    {
+        if (IsResolved)
+        {
+            message = "This has already been resolved.";
+            return true;
+        }
+
+        if (player == null)
+        {
+            message = "Player not found.";
+            return true;
+        }
+
+        NetworkInventory inventory = player.GetComponent<NetworkInventory>();
+        if (inventory == null)
+            inventory = player.GetComponentInChildren<NetworkInventory>(true);
+
+        if (inventory == null)
+        {
+            message = "Inventory not found.";
+            return true;
+        }
+
+        if (RequiredItemId == 0)
+        {
+            message = "Required item is not set.";
+            return true;
+        }
+
+        if (Vector3.Distance(inventory.transform.position, transform.position) > useDistance)
+        {
+            message = "You are too far away.";
+            return true;
+        }
+
+        if (!inventory.HasItem(RequiredItemId, 1))
+        {
+            string itemName = requiredItem != null && !string.IsNullOrWhiteSpace(requiredItem.itemName)
+                ? requiredItem.itemName
+                : "Required item";
+            message = $"{itemName} is required.";
+            return true;
+        }
+
+        message = null;
+        return false;
     }
 
     public bool TryResolve(NetworkInventory inventory)

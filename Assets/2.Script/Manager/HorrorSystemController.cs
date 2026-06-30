@@ -16,6 +16,6 @@ public sealed class HorrorSystemController : GameControllerBase
 
     public void JumpScare()
     {
-        Debug.Log("워!");
+        Debug.Log("Boo!");
     }
 }

@@ -192,10 +192,14 @@ public class NetworkGameManager : MonoBehaviour, INetworkRunnerCallbacks
 
     public void OnInput(NetworkRunner networkRunner, NetworkInput input)
     {
+        Vector2 lookDelta = EmoteWheelController.IsBlockingGameplayInput
+            ? Vector2.zero
+            : new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * 3.5f;
+
         NetworkPlayerInput data = new NetworkPlayerInput
         {
             Move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")),
-            LookDelta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * 3.5f,
+            LookDelta = lookDelta,
             Sprint = Input.GetKey(KeyCode.LeftShift)
         };
 

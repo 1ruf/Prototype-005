@@ -3,7 +3,7 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(NetworkObject))]
-public class NetworkInventoryItem : NetworkBehaviour, IInteractable, IPlayerInteractable, IHoldInteractable
+public class NetworkInventoryItem : NetworkBehaviour, IInteractable, IPlayerInteractable, IHoldInteractable, IInteractionFailureProvider
 {
     [SerializeField] private PlayerItemSO item;
     [SerializeField] private float pickupDistance = 3f;
@@ -63,6 +63,58 @@ public class NetworkInventoryItem : NetworkBehaviour, IInteractable, IPlayerInte
             return false;
 
         return Vector3.Distance(inventory.transform.position, transform.position) <= pickupDistance;
+    }
+
+    public bool TryGetInteractionFailureMessage(PlayerMovement player, out string message)
+    {
+        if (!IsNetworkReady())
+        {
+            message = "This item cannot be picked up yet.";
+            return true;
+        }
+
+        if (IsCollected)
+        {
+            message = "This item has already been collected.";
+            return true;
+        }
+
+        if (item == null || item.itemId == 0)
+        {
+            message = "Item data is missing.";
+            return true;
+        }
+
+        if (player == null)
+        {
+            message = "Player not found.";
+            return true;
+        }
+
+        NetworkInventory inventory = player.GetComponent<NetworkInventory>();
+        if (inventory == null)
+            inventory = player.GetComponentInChildren<NetworkInventory>(true);
+
+        if (inventory == null)
+        {
+            message = "Inventory not found.";
+            return true;
+        }
+
+        if (Vector3.Distance(inventory.transform.position, transform.position) > pickupDistance)
+        {
+            message = "You are too far away.";
+            return true;
+        }
+
+        if (!inventory.CanAddItem(item.itemId, 1))
+        {
+            message = "Not enough inventory space.";
+            return true;
+        }
+
+        message = null;
+        return false;
     }
 
     public bool TryCollect(NetworkInventory inventory)

@@ -29,7 +29,7 @@ public class InteractUIController : MonoBehaviour
         if (_pressedImage == null)
             return;
 
-        _pressedImage.gameObject.SetActive(value);
+        _pressedImage.enabled = value;
     }
 
     public void SetInteractTime(float amount)

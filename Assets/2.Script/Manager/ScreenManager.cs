@@ -68,7 +68,54 @@ public class ScreenManager : MonoBehaviour
             return;
         }
 
+        if (HandleHiddenPlayerExitInput())
+            return;
+
+        if (IsLocalPlayerInteractionBlocked())
+        {
+            Highlight(false);
+            return;
+        }
+
         CheckInteract();
+    }
+
+    private bool HandleHiddenPlayerExitInput()
+    {
+        if (Keyboard.current == null || !Keyboard.current.eKey.wasPressedThisFrame)
+            return false;
+
+        ResolveLocalPlayer();
+        if (localPlayer == null)
+            return false;
+
+        NetworkPlayerHidingComponent hiding = ResolveLocalHidingComponent();
+        if (hiding == null || !hiding.CanRequestExit)
+            return false;
+
+        ResetHoldInteraction(null, false);
+        Highlight(false);
+        hiding.RequestExit();
+        return true;
+    }
+
+    private bool IsLocalPlayerInteractionBlocked()
+    {
+        ResolveLocalPlayer();
+        NetworkPlayerHidingComponent hiding = ResolveLocalHidingComponent();
+        return hiding != null && hiding.BlocksPlayerInput;
+    }
+
+    private NetworkPlayerHidingComponent ResolveLocalHidingComponent()
+    {
+        if (localPlayer == null)
+            return null;
+
+        NetworkPlayerHidingComponent hiding = localPlayer.GetComponent<NetworkPlayerHidingComponent>();
+        if (hiding == null)
+            hiding = localPlayer.GetComponentInChildren<NetworkPlayerHidingComponent>(true);
+
+        return hiding;
     }
 
     private void CheckInteract()
@@ -84,7 +131,14 @@ public class ScreenManager : MonoBehaviour
             IPlayerInteractable playerInteraction = hitInfo.transform.GetComponentInParent<IPlayerInteractable>();
             if (playerInteraction != null)
             {
-                HandleInteraction(playerInteraction as Component, playerInteraction, null);
+                Component targetComponent = playerInteraction as Component;
+                if (!CanInteractAtCurrentDistance(targetComponent))
+                {
+                    Highlight(false);
+                    return;
+                }
+
+                HandleInteraction(targetComponent, playerInteraction, null);
                 Highlight(true);
                 return;
             }
@@ -92,7 +146,14 @@ public class ScreenManager : MonoBehaviour
             IInteractable interaction = hitInfo.transform.GetComponentInParent<IInteractable>();
             if (interaction != null)
             {
-                HandleInteraction(interaction as Component, null, interaction);
+                Component targetComponent = interaction as Component;
+                if (!CanInteractAtCurrentDistance(targetComponent))
+                {
+                    Highlight(false);
+                    return;
+                }
+
+                HandleInteraction(targetComponent, null, interaction);
                 Highlight(true);
                 return;
             }
@@ -109,6 +170,12 @@ public class ScreenManager : MonoBehaviour
         if (targetComponent == null)
         {
             ResetHoldInteraction();
+            return;
+        }
+
+        if (TryShowInteractionFailure(targetComponent))
+        {
+            ResetHoldInteraction(targetComponent, ResolveRequiredHoldTime(targetComponent) > 0f);
             return;
         }
 
@@ -149,6 +216,22 @@ public class ScreenManager : MonoBehaviour
         InvokeInteraction(playerInteraction, interaction);
     }
 
+    private bool TryShowInteractionFailure(Component targetComponent)
+    {
+        if (Keyboard.current == null || !Keyboard.current.eKey.wasPressedThisFrame)
+            return false;
+
+        IInteractionFailureProvider failureProvider = targetComponent.GetComponentInParent<IInteractionFailureProvider>();
+        if (failureProvider == null)
+            return false;
+
+        if (!failureProvider.TryGetInteractionFailureMessage(localPlayer, out string message))
+            return false;
+
+        MessageController.TryShowFailure(message);
+        return true;
+    }
+
     private static float ResolveRequiredHoldTime(Component targetComponent)
     {
         IHoldInteractable holdInteractable = targetComponent.GetComponentInParent<IHoldInteractable>();
@@ -164,6 +247,22 @@ public class ScreenManager : MonoBehaviour
         }
 
         interaction?.Interact();
+    }
+
+    private bool CanInteractAtCurrentDistance(Component targetComponent)
+    {
+        if (targetComponent == null || localPlayer == null)
+            return true;
+
+        NetworkItemUseTarget itemUseTarget = targetComponent.GetComponentInParent<NetworkItemUseTarget>();
+        if (itemUseTarget != null)
+            return Vector3.Distance(localPlayer.transform.position, itemUseTarget.transform.position) <= itemUseTarget.UseDistance;
+
+        NetworkInventoryItem inventoryItem = targetComponent.GetComponentInParent<NetworkInventoryItem>();
+        if (inventoryItem != null)
+            return Vector3.Distance(localPlayer.transform.position, inventoryItem.transform.position) <= inventoryItem.PickupDistance;
+
+        return true;
     }
 
     private void DebugInteractionRay(Ray ray, bool hasHit, RaycastHit hitInfo)
