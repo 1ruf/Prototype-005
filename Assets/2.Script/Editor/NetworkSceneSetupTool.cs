@@ -183,6 +183,7 @@ public static class NetworkSceneSetupTool
         EnsurePlayerAnimationSetup(clone);
         EnsureCameraShakeSetup(clone);
         EnsurePlayerVoiceSetup(clone);
+        EnsurePlayerHidingSetup(clone);
         EnsureNetworkEntitySetup(clone);
         EnsureRagdollSetup(clone);
 
@@ -563,6 +564,26 @@ public static class NetworkSceneSetupTool
         death.Initialize(player);
     }
 
+    private static void EnsurePlayerHidingSetup(GameObject player)
+    {
+        NetworkPlayerHidingComponent hiding = EnsureComponent<NetworkPlayerHidingComponent>(player);
+        PlayerMovement movement = player.GetComponent<PlayerMovement>();
+        NetworkPlayerItemHolder itemHolder = player.GetComponentInChildren<NetworkPlayerItemHolder>(true);
+        NetworkInventory inventory = player.GetComponent<NetworkInventory>();
+        Transform visual = FindChildByName(player.transform, "Visual");
+        Animator visualAnimator = visual != null ? visual.GetComponentInChildren<Animator>(true) : player.GetComponentInChildren<Animator>(true);
+
+        SerializedObject serializedHiding = new SerializedObject(hiding);
+        SetObjectReference(serializedHiding, "playerMovement", movement);
+        SetObjectReference(serializedHiding, "itemHolder", itemHolder);
+        SetObjectReference(serializedHiding, "inventory", inventory);
+        SetObjectReference(serializedHiding, "visualAnimator", visualAnimator);
+        SetObjectReference(serializedHiding, "visualRoot", visual);
+        serializedHiding.ApplyModifiedPropertiesWithoutUndo();
+
+        EnsureNetworkBehaviourRegistered(player.GetComponent<NetworkObject>(), hiding);
+    }
+
     private static void EnsurePlayerComponentOrganization(GameObject player)
     {
         EnsurePlayerSupportComponent<NetworkHealthComponent>(player, "PlayerEntityComponents");
@@ -678,7 +699,8 @@ public static class NetworkSceneSetupTool
                playerPrefab.GetComponent<NetworkDeathComponent>() != null ||
                playerPrefab.GetComponent<PlayerDebugDeathInput>() != null ||
                playerPrefab.GetComponent<NetworkPlayerItemHolder>() != null ||
-               playerPrefab.GetComponent<NetworkPlayerVisualPose>() != null;
+               playerPrefab.GetComponent<NetworkPlayerVisualPose>() != null ||
+               playerPrefab.GetComponent<NetworkPlayerHidingComponent>() == null;
     }
 
     private static bool MissingPlayerAnimationSetup(GameObject playerPrefab)

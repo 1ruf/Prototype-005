@@ -28,6 +28,7 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
     private GameObject heldVisualInstance;
     private int visibleHeldItemId = int.MinValue;
     private int lastInventoryHash;
+    private NetworkPlayerHidingComponent hidingComponent;
     private GameObject owner;
 
     public GameObject Owner => owner != null ? owner : gameObject;
@@ -63,7 +64,7 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         if (Object != null)
             return;
 
-        if (Input.GetKeyDown(dropKey) && HeldItemId != 0)
+        if (!EmoteWheelController.IsBlockingGameplayInput && CanUseInventoryItems() && Input.GetKeyDown(dropKey) && HeldItemId != 0)
             RequestDropHeldItem();
 
         RefreshHeldVisual(false);
@@ -80,13 +81,27 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         CheckInventoryChanged();
         TickHeldVisualPresentation();
 
-        if (IsLocalPlayer && Input.GetKeyDown(dropKey) && HeldItemId != 0)
+        if (!EmoteWheelController.IsBlockingGameplayInput && IsLocalPlayer && CanUseInventoryItems() && Input.GetKeyDown(dropKey) && HeldItemId != 0)
             RequestDropHeldItem();
     }
 
     public bool HasItem(int itemId, int amount = 1)
     {
         return GetItemCount(itemId) >= amount;
+    }
+
+    public bool CanAddItem(int itemId, int amount = 1)
+    {
+        if (itemId == 0 || amount <= 0)
+            return false;
+
+        for (int i = 0; i < MaxSlots; i++)
+        {
+            if (ItemIds[i] == itemId || ItemIds[i] == 0)
+                return true;
+        }
+
+        return false;
     }
 
     public int GetItemCount(int itemId)
@@ -181,6 +196,9 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 
     public void RequestPickup(NetworkInventoryItem worldItem)
     {
+        if (!CanUseInventoryItems())
+            return;
+
         if (worldItem == null || worldItem.Object == null)
             return;
 
@@ -201,6 +219,9 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 
     public void RequestUseOn(NetworkItemUseTarget target)
     {
+        if (!CanUseInventoryItems())
+            return;
+
         if (target == null || target.Object == null)
             return;
 
@@ -226,6 +247,9 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 
     public void RequestDropItem(int itemId)
     {
+        if (!CanUseInventoryItems())
+            return;
+
         if (itemId == 0)
             return;
 
@@ -246,6 +270,9 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 
     public void RequestSetHeldItem(int itemId)
     {
+        if (!CanUseInventoryItems())
+            return;
+
         if (itemId != 0 && !HasItem(itemId))
             return;
 
@@ -262,6 +289,9 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_RequestPickup(NetworkId itemObjectId)
     {
+        if (!CanUseInventoryItems())
+            return;
+
         NetworkObject itemObject = Runner != null ? Runner.FindObject(itemObjectId) : null;
         NetworkInventoryItem item = itemObject != null ? itemObject.GetComponent<NetworkInventoryItem>() : null;
         item?.TryCollect(this);
@@ -270,6 +300,9 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_RequestUseOn(NetworkId targetObjectId)
     {
+        if (!CanUseInventoryItems())
+            return;
+
         NetworkObject targetObject = Runner != null ? Runner.FindObject(targetObjectId) : null;
         NetworkItemUseTarget target = targetObject != null ? targetObject.GetComponent<NetworkItemUseTarget>() : null;
         target?.TryResolve(this);
@@ -278,12 +311,18 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_RequestDropItem(int itemId)
     {
+        if (!CanUseInventoryItems())
+            return;
+
         DropItemStateAuthority(itemId);
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_RequestSetHeldItem(int itemId)
     {
+        if (!CanUseInventoryItems())
+            return;
+
         if (itemId != 0 && !HasItem(itemId))
             return;
 
@@ -458,6 +497,9 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 
     private void ResolveRightHandAnchor()
     {
+        if (hidingComponent == null)
+            hidingComponent = GetComponent<NetworkPlayerHidingComponent>() ?? GetComponentInParent<NetworkPlayerHidingComponent>();
+
         if (rightHandAnchor != null)
             return;
 
@@ -485,5 +527,33 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         }
 
         return null;
+    }
+
+    public void ForceStoreHeldItemForHiding()
+    {
+        if (Object == null || Object.HasStateAuthority)
+        {
+            HeldItemId = 0;
+            NotifyInventoryChanged();
+            return;
+        }
+
+        if (Object.HasInputAuthority)
+            RPC_RequestStoreHeldItemForHiding();
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_RequestStoreHeldItemForHiding()
+    {
+        HeldItemId = 0;
+        NotifyInventoryChanged();
+    }
+
+    private bool CanUseInventoryItems()
+    {
+        if (hidingComponent == null)
+            hidingComponent = GetComponent<NetworkPlayerHidingComponent>() ?? GetComponentInParent<NetworkPlayerHidingComponent>();
+
+        return hidingComponent == null || hidingComponent.CanUseItems;
     }
 }

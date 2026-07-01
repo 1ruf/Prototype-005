@@ -23,6 +23,7 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
     private bool lastActive;
     private bool thirdPersonPresentationSuppressed;
     private bool itemInstanceFromPool;
+    private NetworkPlayerHidingComponent hidingComponent;
     private GameObject owner;
 
     private bool IsLocalPlayer => Object == null || Object.HasInputAuthority;
@@ -76,7 +77,7 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
         if (Object != null)
             return;
 
-        if (Input.GetKeyDown(toggleKey))
+        if (CanUseHeldItem() && Input.GetKeyDown(toggleKey))
             localHeldItemActive = !localHeldItemActive;
 
         ConfigurePresentation(false);
@@ -90,12 +91,15 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
         ApplyNetworkItemState(false);
         TickItemPresentation();
 
-        if (IsLocalPlayer && Input.GetKeyDown(toggleKey))
+        if (IsLocalPlayer && CanUseHeldItem() && Input.GetKeyDown(toggleKey))
             RequestToggleActive();
     }
 
     public void RequestToggleActive()
     {
+        if (!CanUseHeldItem())
+            return;
+
         if (Object == null || !networkSpawned)
         {
             localHeldItemActive = !localHeldItemActive;
@@ -117,6 +121,9 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_RequestSetActive(NetworkBool active)
     {
+        if (!CanUseHeldItem())
+            return;
+
         HeldItemActive = active;
         RPC_ApplyActiveState(active);
     }
@@ -206,6 +213,51 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
         ApplyNetworkItemState(true);
     }
 
+    public void ForceStoreHeldItemForHiding()
+    {
+        if (Object == null || !networkSpawned)
+        {
+            localHeldItemVisible = false;
+            localHeldItemActive = false;
+            ApplyNetworkItemState(true);
+            return;
+        }
+
+        if (Object.HasStateAuthority)
+        {
+            HeldItemVisible = false;
+            HeldItemActive = false;
+            RPC_ApplyStoredForHiding();
+            ApplyNetworkItemState(true);
+            return;
+        }
+
+        if (Object.HasInputAuthority)
+            RPC_RequestStoreForHiding();
+        else
+        {
+            localHeldItemVisible = false;
+            localHeldItemActive = false;
+            ApplyNetworkItemState(true);
+        }
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_RequestStoreForHiding()
+    {
+        HeldItemVisible = false;
+        HeldItemActive = false;
+        RPC_ApplyStoredForHiding();
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    private void RPC_ApplyStoredForHiding()
+    {
+        localHeldItemVisible = false;
+        localHeldItemActive = false;
+        ApplyNetworkItemState(true);
+    }
+
     private void ApplyNetworkItemState(bool force)
     {
         EnsureItemInstance();
@@ -268,6 +320,9 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
         if (playerMovement == null)
             playerMovement = GetComponent<PlayerMovement>() ?? GetComponentInParent<PlayerMovement>();
 
+        if (hidingComponent == null)
+            hidingComponent = GetComponent<NetworkPlayerHidingComponent>() ?? GetComponentInParent<NetworkPlayerHidingComponent>();
+
         if (firstPersonAnchor == null)
         {
             Camera camera = GetOwnerTransform().GetComponentInChildren<Camera>(true);
@@ -298,6 +353,14 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
     private bool GetHeldItemActive()
     {
         return Object != null && networkSpawned ? HeldItemActive : localHeldItemActive;
+    }
+
+    private bool CanUseHeldItem()
+    {
+        if (hidingComponent == null)
+            ResolveReferences();
+
+        return hidingComponent == null || hidingComponent.CanUseItems;
     }
 
     private float GetLookPitch()

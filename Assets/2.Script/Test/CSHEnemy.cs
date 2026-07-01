@@ -12,7 +12,8 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
     {
         Idle = 0,
         Patrol = 1,
-        Chase = 2
+        Chase = 2,
+        Investigate = 3
     }
 
     private interface IEnemyState
@@ -21,6 +22,18 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         void Enter();
         void Tick(float deltaTime);
         void Exit();
+    }
+
+    private readonly struct NavigationPoint
+    {
+        public readonly Vector3 Position;
+        public readonly bool IsValid;
+
+        public NavigationPoint(Vector3 position)
+        {
+            Position = position;
+            IsValid = true;
+        }
     }
 
     [SerializeField] private Transform target;
@@ -40,11 +53,15 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
     [SerializeField] private float patrolRadius = 8f;
     [SerializeField] private float patrolPointReachedDistance = 0.6f;
     [SerializeField] private float idleAtPatrolPointTime = 1.2f;
+    [SerializeField] private float investigateDuration = 4f;
+    [SerializeField] private float investigateRadius = 3f;
     [SerializeField] private LayerMask patrolWallMask = ~0;
-    [SerializeField] private Vector2 wallPatrolDistanceRange = new Vector2(8f, 18f);
+    [SerializeField] private Vector2 wallPatrolDistanceRange = new Vector2(28f, 55f);
     [SerializeField, Range(0f, 1f)] private float patrolWallInfluence = 0.25f;
-    [SerializeField] private Vector2 patrolWanderYawRange = new Vector2(-18f, 18f);
+    [SerializeField] private Vector2 patrolWanderYawRange = new Vector2(-10f, 10f);
+    [SerializeField] private Vector2 patrolSegmentYawRange = new Vector2(-12f, 12f);
     [SerializeField] private Vector2 patrolReverseYawRange = new Vector2(145f, 215f);
+    [SerializeField, Range(0f, 1f)] private float patrolRandomReverseChance = 0.01f;
     [SerializeField] private float wallFollowProbeDistance = 3.5f;
     [SerializeField] private float wallFollowClearance = 1.05f;
     [SerializeField] private float wallFollowStepDistance = 3.2f;
@@ -55,8 +72,11 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
     [SerializeField] private float enemySeparationMaxForce = 3.5f;
     [SerializeField] private float navMeshSnapDistance = 8f;
     [SerializeField] private float chaseNavMeshSampleDistance = 1.2f;
+    [SerializeField] private float chaseTargetNavMeshSampleDistance = 2f;
+    [SerializeField] private float chaseMaxNavPointJumpDistance = 4f;
     [SerializeField] private float chaseTargetBackoffDistance = 3f;
     [SerializeField] private float chaseTargetBackoffStep = 0.35f;
+    [SerializeField] private float chaseDirectFallbackDistance = 6f;
     [SerializeField] private bool preferUnclaimedChaseTargets = true;
     [SerializeField] private float targetClaimSwitchDistance = 1.5f;
     [SerializeField] private float attackDamage = 100f;
@@ -80,6 +100,9 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
     private IEnemyState idleState;
     private IEnemyState patrolState;
     private IEnemyState chaseState;
+    private IEnemyState investigateState;
+    private Vector3 investigateCenter;
+    private float investigateTimer;
     private bool networkSpawned;
     private int renderedAttackSequence;
     private int renderedKillSequence;
@@ -88,6 +111,9 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
     private Vector3 pendingKillKnockbackDirection;
     private float localKillAnimationEndTime;
     private float nextAllowedDoorBreakTime;
+    private bool useDirectChaseMovement;
+    private NavigationPoint chasePoint;
+    private Vector3 lastObservedTargetPosition;
     private GameObject owner;
     private readonly HashSet<RagdollEntityComponent> killAnimatedRagdolls = new HashSet<RagdollEntityComponent>();
 
@@ -307,6 +333,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         {
             EnemyStateId.Idle => idleState,
             EnemyStateId.Chase => chaseState,
+            EnemyStateId.Investigate => investigateState,
             _ => patrolState
         };
     }
@@ -316,6 +343,24 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         idleState = new IdleState(this);
         patrolState = new PatrolState(this);
         chaseState = new ChaseState(this);
+        investigateState = new InvestigateState(this);
+    }
+
+    private void AcquireTarget(Transform newTarget)
+    {
+        target = newTarget;
+        lostSightTimer = 0f;
+        chasePoint = default;
+        lastObservedTargetPosition = newTarget != null ? newTarget.position : transform.position;
+        RefreshChasePointFromTarget();
+    }
+
+    private Vector3 GetLastKnownTargetNavigationPosition()
+    {
+        if (chasePoint.IsValid)
+            return chasePoint.Position;
+
+        return target != null ? target.position : lastObservedTargetPosition;
     }
 
     private void MoveTo(Vector3 destination, float speed)
@@ -332,6 +377,9 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             if (desiredVelocity.sqrMagnitude <= 0.001f && agent.hasPath && agent.path.corners.Length > 1)
                 desiredVelocity = (agent.path.corners[1] - transform.position).normalized * speed;
 
+            if (desiredVelocity.sqrMagnitude <= 0.001f)
+                desiredVelocity = ResolveImmediatePathVelocity(destination, speed);
+
             desiredVelocity = ApplyEnemySeparation(desiredVelocity, speed);
             desiredVelocity.y = rb.linearVelocity.y;
             rb.linearVelocity = desiredVelocity.sqrMagnitude > 0.001f ? desiredVelocity : rb.linearVelocity;
@@ -339,6 +387,25 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         }
 
         MoveDirectlyTo(destination, speed, Time.deltaTime);
+    }
+
+    private Vector3 ResolveImmediatePathVelocity(Vector3 destination, float speed)
+    {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            return Vector3.zero;
+
+        NavMeshPath path = new NavMeshPath();
+        if (agent.CalculatePath(destination, path) && path.status != NavMeshPathStatus.PathInvalid && path.corners.Length > 1)
+        {
+            Vector3 nextCornerDirection = path.corners[1] - transform.position;
+            nextCornerDirection.y = 0f;
+            if (nextCornerDirection.sqrMagnitude > 0.001f)
+                return nextCornerDirection.normalized * speed;
+        }
+
+        Vector3 directDirection = destination - transform.position;
+        directDirection.y = 0f;
+        return directDirection.sqrMagnitude > 0.001f ? directDirection.normalized * speed : Vector3.zero;
     }
 
     private void StopMoving()
@@ -518,7 +585,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
         foreach (PlayerMovement player in PlayerRuntimeRegistry.Players)
         {
-            if (player == null || IsDeadTarget(player.transform))
+            if (player == null || IsDeadTarget(player.transform) || IsHiddenTarget(player.transform))
                 continue;
 
             Vector3 offset = player.transform.position - transform.position;
@@ -617,6 +684,12 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         if (target == null || IsDeadTarget(target))
             return true;
 
+        if (IsHiddenTarget(target))
+            return true;
+
+        if (IsCompromisedHiddenTarget(target))
+            return false;
+
         if (preferUnclaimedChaseTargets && HasBetterEnemyClaimingTarget(target))
             return true;
 
@@ -629,12 +702,14 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         if (distance <= proximityDetectionRange)
         {
             lostSightTimer = 0f;
+            RefreshChasePointFromTarget();
             return false;
         }
 
         if (CanSee(target, loseRange))
         {
             lostSightTimer = 0f;
+            RefreshChasePointFromTarget();
             return false;
         }
 
@@ -797,6 +872,18 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         return direction.sqrMagnitude > 0.0001f ? direction.normalized : -currentDirection.normalized;
     }
 
+    private Vector3 GetRandomForwardSegmentDirection(Vector3 currentDirection)
+    {
+        currentDirection.y = 0f;
+        if (currentDirection.sqrMagnitude <= 0.0001f)
+            currentDirection = GetInitialWallPatrolDirection();
+
+        float yaw = Random.Range(patrolSegmentYawRange.x, patrolSegmentYawRange.y);
+        Vector3 direction = Quaternion.Euler(0f, yaw, 0f) * currentDirection.normalized;
+        direction.y = 0f;
+        return direction.sqrMagnitude > 0.0001f ? direction.normalized : currentDirection.normalized;
+    }
+
     private bool TryFindNearbyWall(Vector3 origin, Vector3 travelDirection, out int wallSide)
     {
         wallSide = 1;
@@ -828,6 +915,23 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
         projectedPoint = candidate;
         return agent == null || !agent.enabled || !agent.isOnNavMesh;
+    }
+
+    private void BeginInvestigating(Vector3 center)
+    {
+        investigateCenter = center;
+        investigateTimer = Mathf.Max(0.1f, investigateDuration);
+        ChangeState(EnemyStateId.Investigate);
+    }
+
+    private Vector3 GetRandomInvestigatePoint()
+    {
+        Vector2 offset = Random.insideUnitCircle * Mathf.Max(0.1f, investigateRadius);
+        Vector3 candidate = investigateCenter + new Vector3(offset.x, 0f, offset.y);
+        if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, navMeshSnapDistance, NavMesh.AllAreas))
+            return hit.position;
+
+        return candidate;
     }
 
     private static Vector3 GetSideDirection(Vector3 forward, int side)
@@ -878,10 +982,50 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
     private Vector3 ResolveChaseDestination(Transform chaseTarget)
     {
+        useDirectChaseMovement = false;
+
         if (chaseTarget == null)
             return transform.position;
 
+        RefreshChasePointFromTarget();
+
+        if (chasePoint.IsValid)
+            return chasePoint.Position;
+
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+            return transform.position;
+
         Vector3 targetPosition = chaseTarget.position;
+        float targetDistance = GetFlatDistance(transform.position, targetPosition);
+        if (targetDistance <= Mathf.Max(0f, chaseDirectFallbackDistance) || CanSee(chaseTarget, loseRange))
+        {
+            useDirectChaseMovement = true;
+            return targetPosition;
+        }
+
+        return transform.position;
+    }
+
+    private bool RefreshChasePointFromTarget()
+    {
+        if (target == null)
+            return false;
+
+        lastObservedTargetPosition = target.position;
+        if (!TryResolveChaseNavPoint(lastObservedTargetPosition, out NavigationPoint point))
+            return false;
+
+        if (chasePoint.IsValid && GetFlatDistance(chasePoint.Position, point.Position) > Mathf.Max(0.1f, chaseMaxNavPointJumpDistance))
+            return false;
+
+        chasePoint = point;
+        return true;
+    }
+
+    private bool TryResolveChaseNavPoint(Vector3 targetPosition, out NavigationPoint point)
+    {
+        point = default;
+
         Vector3 towardEnemy = transform.position - targetPosition;
         towardEnemy.y = 0f;
 
@@ -899,39 +1043,44 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         float maxBackoff = Mathf.Max(0f, chaseTargetBackoffDistance);
         float step = Mathf.Max(0.1f, chaseTargetBackoffStep);
         int steps = Mathf.Max(1, Mathf.CeilToInt(maxBackoff / step));
+        float sampleDistance = Mathf.Max(0.05f, chaseNavMeshSampleDistance, chaseTargetNavMeshSampleDistance);
 
         for (int i = 0; i <= steps; i++)
         {
             float distance = Mathf.Min(i * step, maxBackoff);
             Vector3 candidate = targetPosition + towardEnemy * distance;
 
-            if (TryProjectReachableChasePoint(candidate, targetPosition, towardEnemy, out Vector3 reachablePoint))
-                return reachablePoint;
+            if (TryProjectReachableChasePoint(candidate, sampleDistance, out Vector3 reachablePoint))
+            {
+                point = new NavigationPoint(reachablePoint);
+                return true;
+            }
         }
 
-        return ProjectDestinationToNavMesh(targetPosition);
+        if (TryProjectReachableChasePoint(targetPosition, sampleDistance, out Vector3 targetPoint))
+        {
+            point = new NavigationPoint(targetPoint);
+            return true;
+        }
+
+        return false;
     }
 
-    private bool TryProjectReachableChasePoint(Vector3 candidate, Vector3 targetPosition, Vector3 towardEnemy, out Vector3 point)
+    private bool TryProjectReachableChasePoint(Vector3 candidate, float sampleDistance, out Vector3 point)
     {
         point = candidate;
 
         if (agent == null || !agent.enabled || !agent.isOnNavMesh)
             return false;
 
-        if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, chaseNavMeshSampleDistance, NavMesh.AllAreas))
-            return false;
-
-        Vector3 targetToProjected = hit.position - targetPosition;
-        targetToProjected.y = 0f;
-        if (Vector3.Dot(targetToProjected, towardEnemy) < -0.05f)
+        if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, sampleDistance, NavMesh.AllAreas))
             return false;
 
         NavMeshPath path = new NavMeshPath();
         if (!agent.CalculatePath(hit.position, path))
             return false;
 
-        if (path.status != NavMeshPathStatus.PathComplete)
+        if (path.status == NavMeshPathStatus.PathInvalid)
             return false;
 
         point = hit.position;
@@ -965,7 +1114,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         if (currentState.Id == EnemyStateId.Chase)
             return EnemyAnimationState.Chase;
 
-        if (currentState.Id == EnemyStateId.Patrol && IsMovingForAnimation())
+        if ((currentState.Id == EnemyStateId.Patrol || currentState.Id == EnemyStateId.Investigate) && IsMovingForAnimation())
             return EnemyAnimationState.Patrol;
 
         return EnemyAnimationState.Idle;
@@ -1127,6 +1276,9 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             return;
 
         PlayerMovement player = collision.gameObject.GetComponentInParent<PlayerMovement>();
+        if (player != null && IsHiddenTarget(player.transform) && !CanSee(player.transform, loseRange))
+            return;
+
         NetworkHealthComponent health = GetPlayerComponent<NetworkHealthComponent>(collision.gameObject, player);
         RagdollEntityComponent ragdoll = GetPlayerComponent<RagdollEntityComponent>(collision.gameObject, player);
         IKnockbackable knockbackable = GetPlayerKnockbackable(collision.gameObject, player);
@@ -1221,6 +1373,121 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
         RagdollEntityComponent ragdoll = GetPlayerComponent<RagdollEntityComponent>(candidate.gameObject, player);
         return ragdoll != null && (ragdoll.IsDead || ragdoll.IsRagdollEnabled);
+    }
+
+    private static bool IsHiddenTarget(Transform candidate)
+    {
+        if (candidate == null)
+            return false;
+
+        NetworkPlayerHidingComponent hiding = candidate.GetComponentInParent<NetworkPlayerHidingComponent>();
+        return hiding != null && hiding.IsHiding && !hiding.IsHidingCompromised;
+    }
+
+    private static bool IsCompromisedHiddenTarget(Transform candidate)
+    {
+        if (candidate == null)
+            return false;
+
+        NetworkPlayerHidingComponent hiding = candidate.GetComponentInParent<NetworkPlayerHidingComponent>();
+        return hiding != null && hiding.IsHiding && hiding.IsHidingCompromised;
+    }
+
+    public bool CanCurrentlySee(PlayerMovement player)
+    {
+        return player != null && !IsDeadTarget(player.transform) && CanSee(player.transform, loseRange);
+    }
+
+    public bool TryKillPlayer(PlayerMovement player)
+    {
+        if (player == null)
+            return false;
+
+        if (Object != null && !Object.HasStateAuthority)
+            return false;
+
+        NetworkHealthComponent health = GetPlayerComponent<NetworkHealthComponent>(player.gameObject, player);
+        RagdollEntityComponent ragdoll = GetPlayerComponent<RagdollEntityComponent>(player.gameObject, player);
+        IKnockbackable knockbackable = GetPlayerKnockbackable(player.gameObject, player);
+        Transform killedVisual = GetPlayerVisualTransform(player.gameObject, player);
+
+        if (IsDeadPlayerTarget(health, ragdoll))
+            return false;
+
+        Vector3 knockbackDirection = player.transform.position - transform.position;
+        knockbackDirection.y = 0f;
+        if (knockbackDirection.sqrMagnitude <= 0.0001f)
+            knockbackDirection = visual != null ? visual.forward : transform.forward;
+
+        if (health != null)
+            health.Kill();
+
+        if (ragdoll != null)
+        {
+            ragdoll.Kill();
+            ragdoll.ResetRagdollVelocity();
+        }
+
+        TriggerKillAnimationOnce(knockbackable, ragdoll, knockbackDirection, killedVisual);
+        return true;
+    }
+
+    public static bool TryKillIfAnyEnemyCanSee(PlayerMovement player)
+    {
+        if (player == null)
+            return false;
+
+        foreach (CSHEnemy enemy in EnemyRuntimeRegistry.Enemies)
+        {
+            if (enemy == null || !enemy.isActiveAndEnabled)
+                continue;
+
+            if (enemy.Object != null && !enemy.Object.HasStateAuthority)
+                continue;
+
+            if (!enemy.CanCurrentlySee(player))
+                continue;
+
+            return enemy.TryKillPlayer(player);
+        }
+
+        return false;
+    }
+
+    public static bool HasEnemyDetectedPlayer(PlayerMovement player)
+    {
+        if (player == null)
+            return false;
+
+        foreach (CSHEnemy enemy in EnemyRuntimeRegistry.Enemies)
+        {
+            if (enemy == null || !enemy.isActiveAndEnabled)
+                continue;
+
+            if (enemy.Object != null && !enemy.Object.HasStateAuthority)
+                continue;
+
+            if (enemy.IsChasingTransform(player.transform) || enemy.CanCurrentlySee(player))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool TryKillCompromisedHiddenTarget()
+    {
+        if (target == null || !IsCompromisedHiddenTarget(target))
+            return false;
+
+        PlayerMovement player = target.GetComponentInParent<PlayerMovement>();
+        if (player == null)
+            return false;
+
+        float killDistance = Mathf.Max(0.75f, proximityDetectionRange);
+        if (GetFlatDistance(transform.position, target.position) > killDistance)
+            return false;
+
+        return TryKillPlayer(player);
     }
 
     private bool HasAlreadyPlayedKillFor(RagdollEntityComponent ragdoll)
@@ -1333,8 +1600,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         {
             if (enemy.TryFindVisibleTarget(out Transform visibleTarget))
             {
-                enemy.target = visibleTarget;
-                enemy.lostSightTimer = 0f;
+                enemy.AcquireTarget(visibleTarget);
                 enemy.ChangeState(EnemyStateId.Chase);
                 return;
             }
@@ -1379,8 +1645,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         {
             if (enemy.TryFindVisibleTarget(out Transform visibleTarget))
             {
-                enemy.target = visibleTarget;
-                enemy.lostSightTimer = 0f;
+                enemy.AcquireTarget(visibleTarget);
                 enemy.ChangeState(EnemyStateId.Chase);
                 return;
             }
@@ -1392,7 +1657,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             lastPosition = currentPosition;
 
             if (remainingSegmentDistance <= 0f)
-                ReverseSegment();
+                StartNextSegment();
 
             if (enemy.ShouldRefreshWallPatrolDestination(patrolDestination))
                 RefreshDestination();
@@ -1405,9 +1670,13 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         {
         }
 
-        private void ReverseSegment()
+        private void StartNextSegment()
         {
-            travelDirection = enemy.GetRandomReverseDirection(travelDirection);
+            if (Random.value < enemy.patrolRandomReverseChance)
+                travelDirection = enemy.GetRandomReverseDirection(travelDirection);
+            else
+                travelDirection = enemy.GetRandomForwardSegmentDirection(travelDirection);
+
             remainingSegmentDistance = enemy.GetRandomWallPatrolDistance();
             RefreshDestination();
         }
@@ -1448,14 +1717,27 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
         public void Tick(float deltaTime)
         {
+            if (enemy.TryKillCompromisedHiddenTarget())
+                return;
+
             if (enemy.ShouldLoseTarget(deltaTime))
             {
+                bool hiddenTarget = IsHiddenTarget(enemy.target);
+                Vector3 lastKnownPosition = enemy.GetLastKnownTargetNavigationPosition();
                 enemy.target = null;
-                enemy.ChangeState(EnemyStateId.Patrol);
+                if (hiddenTarget)
+                    enemy.BeginInvestigating(lastKnownPosition);
+                else
+                    enemy.ChangeState(EnemyStateId.Patrol);
                 return;
             }
 
-            enemy.MoveTo(enemy.ResolveChaseDestination(enemy.target), enemy.moveSpeed);
+            Vector3 destination = enemy.ResolveChaseDestination(enemy.target);
+            if (enemy.useDirectChaseMovement)
+                enemy.MoveDirectlyTo(destination, enemy.moveSpeed, deltaTime);
+            else
+                enemy.MoveTo(destination, enemy.moveSpeed);
+
             enemy.TryBreakChaseDoor();
             enemy.RotateTowardMovement();
         }
@@ -1463,6 +1745,57 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         public void Exit()
         {
             enemy.StopMoving();
+        }
+    }
+
+    private sealed class InvestigateState : IEnemyState
+    {
+        private readonly CSHEnemy enemy;
+        private Vector3 destination;
+
+        public EnemyStateId Id => EnemyStateId.Investigate;
+
+        public InvestigateState(CSHEnemy enemy)
+        {
+            this.enemy = enemy;
+        }
+
+        public void Enter()
+        {
+            enemy.investigateTimer = Mathf.Max(0.1f, enemy.investigateDuration);
+            RefreshDestination();
+        }
+
+        public void Tick(float deltaTime)
+        {
+            if (enemy.TryFindVisibleTarget(out Transform visibleTarget))
+            {
+                enemy.AcquireTarget(visibleTarget);
+                enemy.ChangeState(EnemyStateId.Chase);
+                return;
+            }
+
+            enemy.investigateTimer -= deltaTime;
+            if (enemy.investigateTimer <= 0f)
+            {
+                enemy.ChangeState(EnemyStateId.Patrol);
+                return;
+            }
+
+            if (enemy.ShouldRefreshWallPatrolDestination(destination))
+                RefreshDestination();
+
+            enemy.MoveTo(destination, enemy.patrolSpeed);
+            enemy.RotateTowardMovement();
+        }
+
+        public void Exit()
+        {
+        }
+
+        private void RefreshDestination()
+        {
+            destination = enemy.GetRandomInvestigatePoint();
         }
     }
 }

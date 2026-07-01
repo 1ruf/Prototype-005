@@ -1746,7 +1746,7 @@ MonoBehaviour:
   visual: {fileID: 2742519702705152758}
   animationDriver: {fileID: 6124938067429813641}
   ui: {fileID: 0}
-  moveSpeed: 12
+  moveSpeed: 7
   patrolSpeed: 2.2
   rotationSpeed: 5
   detectionRange: 50
@@ -1761,13 +1761,17 @@ MonoBehaviour:
   patrolRadius: 8
   patrolPointReachedDistance: 0.6
   idleAtPatrolPointTime: 1.2
+  investigateDuration: 4
+  investigateRadius: 3
   patrolWallMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  wallPatrolDistanceRange: {x: 8, y: 18}
+  wallPatrolDistanceRange: {x: 28, y: 55}
   patrolWallInfluence: 0.25
-  patrolWanderYawRange: {x: -18, y: 18}
+  patrolWanderYawRange: {x: -10, y: 10}
+  patrolSegmentYawRange: {x: -12, y: 12}
   patrolReverseYawRange: {x: 145, y: 215}
+  patrolRandomReverseChance: 0.01
   wallFollowProbeDistance: 3.5
   wallFollowClearance: 1.05
   wallFollowStepDistance: 3.2
@@ -1778,8 +1782,11 @@ MonoBehaviour:
   enemySeparationMaxForce: 3.5
   navMeshSnapDistance: 12
   chaseNavMeshSampleDistance: 1.2
+  chaseTargetNavMeshSampleDistance: 2
+  chaseMaxNavPointJumpDistance: 4
   chaseTargetBackoffDistance: 3
   chaseTargetBackoffStep: 0.35
+  chaseDirectFallbackDistance: 6
   preferUnclaimedChaseTargets: 1
   targetClaimSwitchDistance: 1.5
   attackDamage: 100

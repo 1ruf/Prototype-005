@@ -55,6 +55,13 @@ public class MouseLookSystem : MonoBehaviour
 
     private void SetCamera()
     {
+        if (EmoteWheelController.IsBlockingGameplayInput)
+        {
+            _currentMouseDelta = Vector2.zero;
+            _currentMouseDeltaVelocity = Vector2.zero;
+            return;
+        }
+
         float targetMouseX = Mathf.Clamp(Input.GetAxis("Mouse X") * _mouseSensitivity * Time.deltaTime, -_cameraXMoveSpeed, _cameraXMoveSpeed);
         float targetMouseY = Input.GetAxis("Mouse Y") * _mouseSensitivity * Time.deltaTime;
 

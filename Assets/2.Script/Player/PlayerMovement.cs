@@ -41,6 +41,7 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
     private float _lastVisualAnimatorSpeed = -1f;
     private Component[] _localCinemachineCameras;
     private string _lastCameraAuthorityLog;
+    private NetworkPlayerHidingComponent _hidingComponent;
     private GameObject owner;
 
     private const string IdleStateName = "Base Layer.Idle";
@@ -63,6 +64,15 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
     }
 
     public GameObject Owner => owner != null ? owner : gameObject;
+
+    public void RefreshLocalCameraPresentation()
+    {
+        if (!IsLocalNetworkPlayer)
+            return;
+
+        activeLocalPlayer = this;
+        EnforceSingleLocalCamera();
+    }
 
     public void Initialize(GameObject entityOwner)
     {
@@ -118,6 +128,7 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
             _controller = GetComponent<CharacterController>();
 
         _networkController = GetComponent<NetworkCharacterController>();
+        _hidingComponent = GetComponent<NetworkPlayerHidingComponent>();
         ResolveVisualAnimator();
         DisableNetworkCameraUntilSpawned();
     }
@@ -137,6 +148,7 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
     {
         _networkSpawned = true;
         _networkController = GetComponent<NetworkCharacterController>();
+        _hidingComponent = GetComponent<NetworkPlayerHidingComponent>();
         ResolveVisualAnimator();
         ConfigureNetworkController();
         if (Object.HasStateAuthority)
@@ -177,6 +189,14 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
         }
 
         GroundCheck();
+        if (IsHidingInputBlocked())
+        {
+            currentSpeed = Vector3.MoveTowards(currentSpeed, Vector3.zero, _deceleration * Time.deltaTime);
+            WalkAnimation();
+            UpdateLocalVisualAnimation();
+            return;
+        }
+
         Movement();
         Falling();
         WalkAnimation();
@@ -188,6 +208,18 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
     {
         if (!_networkSpawned)
             return;
+
+        if (IsHidingInputBlocked())
+        {
+            if (Object != null && Object.HasStateAuthority)
+            {
+                IsMoving = false;
+                IsSprinting = false;
+                VisualAnimationSpeed = 1f;
+            }
+
+            return;
+        }
 
         if (_networkController == null)
             return;
@@ -310,7 +342,9 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
 
     private void RenderNetworkPresentation()
     {
-        if (IsLocalNetworkPlayer)
+        bool localInputBlocked = IsHidingInputBlocked();
+
+        if (IsLocalNetworkPlayer && !localInputBlocked)
             EnforceSingleLocalCamera();
 
         if (Object != null && !Object.HasStateAuthority)
@@ -322,14 +356,14 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
         if (IsLocalNetworkPlayer)
         {
             Vector2 localMove = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-            bool localMoving = localMove.sqrMagnitude > 0.001f;
-            bool localSprinting = Input.GetKey(KeyCode.LeftShift);
+            bool localMoving = !localInputBlocked && localMove.sqrMagnitude > 0.001f;
+            bool localSprinting = !localInputBlocked && Input.GetKey(KeyCode.LeftShift);
             float localSpeed = _speed * (localSprinting ? _sprintMultiply : 1f);
             visualMoving = localMoving;
             visualAnimationSpeed = CalculateVisualAnimationSpeed(localMoving, localSprinting, localSpeed);
         }
 
-        if (IsLocalNetworkPlayer)
+        if (IsLocalNetworkPlayer && !localInputBlocked)
             ApplyLocalFOV(Input.GetKey(KeyCode.LeftShift));
 
         if (_camAnimator == null)
@@ -379,6 +413,14 @@ public class PlayerMovement : NetworkBehaviour, INetworkEntityComponent
             _visualAnimator.speed = targetSpeed;
             _lastVisualAnimatorSpeed = targetSpeed;
         }
+    }
+
+    private bool IsHidingInputBlocked()
+    {
+        if (_hidingComponent == null)
+            _hidingComponent = GetComponent<NetworkPlayerHidingComponent>();
+
+        return _hidingComponent != null && _hidingComponent.BlocksPlayerInput;
     }
 
     private void ResolveVisualAnimator()

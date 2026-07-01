@@ -9,3 +9,8 @@ public interface IHoldInteractable
 {
     float RequiredHoldTime { get; }
 }
+
+public interface IInteractionFailureProvider
+{
+    bool TryGetInteractionFailureMessage(PlayerMovement player, out string message);
+}
