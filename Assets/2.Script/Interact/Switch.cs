@@ -1,8 +1,11 @@
 using UnityEngine;
 using UnityEngine.Events;
 
-public class Switch : MonoBehaviour, IInteractable, IHoldInteractable
+public class Switch : MonoBehaviour, IInteractable, IHoldInteractable, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
+    [SerializeField] private string interactionText = "Switch";
+    [SerializeField] private string actionText = "Use";
+    [SerializeField] private int interactionPriority = 20;
     [SerializeField] private string powerKey = PowerKeys.LightFloor1;
     [SerializeField] private float requiredHoldTime;
     [SerializeField] private bool togglePower = true;
@@ -11,6 +14,9 @@ public class Switch : MonoBehaviour, IInteractable, IHoldInteractable
 
     public UnityEvent Triggered;
     public float RequiredHoldTime => Mathf.Max(0f, requiredHoldTime);
+    public string InteractionText => interactionText;
+    public string InteractionActionText => actionText;
+    public int InteractionPriority => interactionPriority;
 
     public void Interact()
     {

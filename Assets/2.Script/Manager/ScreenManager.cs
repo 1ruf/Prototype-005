@@ -5,6 +5,7 @@ public class ScreenManager : MonoBehaviour
 {
     [SerializeField] private float _interactableRadius;
     [SerializeField] private LayerMask _interactableLayerMask = ~0;
+    [SerializeField] private LayerMask _interactionBlockerLayerMask = ~0;
     [SerializeField] private bool _debugInteractionRay;
     [SerializeField] private Texture2D _mouseCursor;
     [SerializeField] private GameObject _lockedMouseCursor;
@@ -16,6 +17,17 @@ public class ScreenManager : MonoBehaviour
     private Component holdTarget;
     private float holdElapsedTime;
     private bool holdInteractionTriggered;
+
+    private struct InteractionCandidate
+    {
+        public Component TargetComponent;
+        public IPlayerInteractable PlayerInteraction;
+        public IInteractable Interaction;
+        public RaycastHit HitInfo;
+        public int Priority;
+        public string TargetName;
+        public string ActionText;
+    }
 
     private void OnEnable()
     {
@@ -123,46 +135,184 @@ public class ScreenManager : MonoBehaviour
         ResolveLocalPlayer();
 
         Ray ray = new Ray(localCamera.transform.position, localCamera.transform.forward);
+        int raycastMask = _interactableLayerMask | _interactionBlockerLayerMask;
+        RaycastHit[] hits = Physics.RaycastAll(ray, _interactableRadius, raycastMask);
 
-        if (Physics.Raycast(ray, out RaycastHit hitInfo, _interactableRadius, _interactableLayerMask))
+        if (hits.Length > 0)
         {
-            DebugInteractionRay(ray, true, hitInfo);
-
-            IPlayerInteractable playerInteraction = hitInfo.transform.GetComponentInParent<IPlayerInteractable>();
-            if (playerInteraction != null)
+            float blockerDistance = FindNearestInteractionBlockerDistance(hits);
+            if (TrySelectInteractionCandidate(hits, blockerDistance, out InteractionCandidate candidate))
             {
-                Component targetComponent = playerInteraction as Component;
-                if (!CanInteractAtCurrentDistance(targetComponent))
-                {
-                    Highlight(false);
-                    return;
-                }
-
-                HandleInteraction(targetComponent, playerInteraction, null);
-                Highlight(true);
+                DebugInteractionRay(ray, true, candidate.HitInfo);
+                HandleInteraction(candidate.TargetComponent, candidate.PlayerInteraction, candidate.Interaction);
+                Highlight(true, candidate.TargetName, candidate.ActionText);
                 return;
             }
 
-            IInteractable interaction = hitInfo.transform.GetComponentInParent<IInteractable>();
-            if (interaction != null)
-            {
-                Component targetComponent = interaction as Component;
-                if (!CanInteractAtCurrentDistance(targetComponent))
-                {
-                    Highlight(false);
-                    return;
-                }
-
-                HandleInteraction(targetComponent, null, interaction);
-                Highlight(true);
-                return;
-            }
+            DebugInteractionRay(ray, true, GetNearestHit(hits));
         }
         else
         {
             DebugInteractionRay(ray, false, default);
         }
         Highlight(false);
+    }
+
+    private bool TrySelectInteractionCandidate(RaycastHit[] hits, float blockerDistance, out InteractionCandidate selectedCandidate)
+    {
+        selectedCandidate = default;
+        bool hasCandidate = false;
+
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.distance > blockerDistance)
+                continue;
+
+            if (!TryBuildInteractionCandidate(hit, out InteractionCandidate candidate))
+                continue;
+
+            if (!CanInteractAtCurrentDistance(candidate.TargetComponent))
+                continue;
+
+            if (!hasCandidate || IsBetterInteractionCandidate(candidate, selectedCandidate))
+            {
+                selectedCandidate = candidate;
+                hasCandidate = true;
+            }
+        }
+
+        return hasCandidate;
+    }
+
+    private float FindNearestInteractionBlockerDistance(RaycastHit[] hits)
+    {
+        float nearestDistance = float.PositiveInfinity;
+
+        foreach (RaycastHit hit in hits)
+        {
+            Transform hitTransform = hit.transform;
+            if (hitTransform == null)
+                continue;
+
+            if (!IsLayerInMask(hitTransform.gameObject.layer, _interactionBlockerLayerMask))
+                continue;
+
+            if (IsLocalPlayerHit(hitTransform))
+                continue;
+
+            if (TryBuildInteractionCandidate(hit, out _))
+                continue;
+
+            if (hit.distance < nearestDistance)
+                nearestDistance = hit.distance;
+        }
+
+        return nearestDistance;
+    }
+
+    private bool TryBuildInteractionCandidate(RaycastHit hitInfo, out InteractionCandidate candidate)
+    {
+        candidate = default;
+        Transform hitTransform = hitInfo.transform;
+        if (hitTransform == null)
+            return false;
+
+        if (!IsLayerInMask(hitTransform.gameObject.layer, _interactableLayerMask))
+            return false;
+
+        IPlayerInteractable playerInteraction = hitTransform.GetComponentInParent<IPlayerInteractable>();
+        if (playerInteraction != null)
+        {
+            Component targetComponent = playerInteraction as Component;
+            if (targetComponent == null)
+                return false;
+
+            candidate = new InteractionCandidate
+            {
+                TargetComponent = targetComponent,
+                PlayerInteraction = playerInteraction,
+                Interaction = null,
+                HitInfo = hitInfo,
+                Priority = ResolveInteractionPriority(targetComponent),
+                TargetName = ResolveInteractionTargetName(targetComponent),
+                ActionText = ResolveInteractionActionText(targetComponent)
+            };
+            return true;
+        }
+
+        IInteractable interaction = hitTransform.GetComponentInParent<IInteractable>();
+        if (interaction == null)
+            return false;
+
+        Component interactionComponent = interaction as Component;
+        if (interactionComponent == null)
+            return false;
+
+        candidate = new InteractionCandidate
+        {
+            TargetComponent = interactionComponent,
+            PlayerInteraction = null,
+            Interaction = interaction,
+            HitInfo = hitInfo,
+            Priority = ResolveInteractionPriority(interactionComponent),
+            TargetName = ResolveInteractionTargetName(interactionComponent),
+            ActionText = ResolveInteractionActionText(interactionComponent)
+        };
+        return true;
+    }
+
+    private bool IsLocalPlayerHit(Transform hitTransform)
+    {
+        return localPlayer != null && hitTransform.IsChildOf(localPlayer.transform);
+    }
+
+    private static bool IsLayerInMask(int layer, LayerMask mask)
+    {
+        return (mask.value & (1 << layer)) != 0;
+    }
+
+    private static bool IsBetterInteractionCandidate(InteractionCandidate candidate, InteractionCandidate current)
+    {
+        if (candidate.Priority != current.Priority)
+            return candidate.Priority > current.Priority;
+
+        return candidate.HitInfo.distance < current.HitInfo.distance;
+    }
+
+    private static int ResolveInteractionPriority(Component targetComponent)
+    {
+        IInteractionPriority priority = targetComponent.GetComponentInParent<IInteractionPriority>();
+        return priority != null ? priority.InteractionPriority : 0;
+    }
+
+    private static string ResolveInteractionTargetName(Component targetComponent)
+    {
+        IInteractionPrompt prompt = targetComponent.GetComponentInParent<IInteractionPrompt>();
+        if (prompt != null && !string.IsNullOrWhiteSpace(prompt.InteractionText))
+            return prompt.InteractionText;
+
+        return targetComponent.gameObject.name;
+    }
+
+    private static string ResolveInteractionActionText(Component targetComponent)
+    {
+        IInteractionActionPrompt prompt = targetComponent.GetComponentInParent<IInteractionActionPrompt>();
+        if (prompt != null && !string.IsNullOrWhiteSpace(prompt.InteractionActionText))
+            return prompt.InteractionActionText;
+
+        return "Interact";
+    }
+
+    private static RaycastHit GetNearestHit(RaycastHit[] hits)
+    {
+        RaycastHit nearest = hits[0];
+        for (int i = 1; i < hits.Length; i++)
+        {
+            if (hits[i].distance < nearest.distance)
+                nearest = hits[i];
+        }
+
+        return nearest;
     }
 
     private void HandleInteraction(Component targetComponent, IPlayerInteractable playerInteraction, IInteractable interaction)
@@ -327,12 +477,12 @@ public class ScreenManager : MonoBehaviour
         return path;
     }
 
-    private void Highlight(bool value)
+    private void Highlight(bool value, string targetName = null, string actionText = null)
     {
         if (Manager.Instance == null || Manager.Instance.UIManager == null)
             return;
 
-        Manager.Instance.UIManager.SetInteractUI(value);
+        Manager.Instance.UIManager.SetInteractUI(value, targetName, actionText);
 
         if (!value)
             ResetHoldInteraction();

@@ -2,11 +2,14 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldInteractable, IInteractionFailureProvider
+public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldInteractable, IInteractionFailureProvider, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
     private static readonly Dictionary<int, NetworkHidingSpot> Spots = new();
     private static readonly Dictionary<int, uint> Occupants = new();
 
+    [SerializeField] private string interactionText = "Locker";
+    [SerializeField] private string actionText = "Hide";
+    [SerializeField] private int interactionPriority = 30;
     [SerializeField] private int spotId = 1;
     [SerializeField] private Transform cameraPose;
     [SerializeField] private Transform visualPose;
@@ -34,6 +37,9 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
     public float EnterDuration => Mathf.Max(0f, enterDuration);
     public float ExitDuration => Mathf.Max(0f, exitDuration);
     public bool IsOccupied => Occupants.ContainsKey(spotId);
+    public string InteractionText => interactionText;
+    public string InteractionActionText => actionText;
+    public int InteractionPriority => interactionPriority;
 
     public static NetworkHidingSpot Find(int id)
     {

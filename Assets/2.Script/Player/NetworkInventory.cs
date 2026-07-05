@@ -6,7 +6,7 @@ using UnityEngine;
 [RequireComponent(typeof(NetworkObject))]
 public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 {
-    private const int MaxSlots = 16;
+    public const int MaxSlots = 3;
 
     [SerializeField] private PlayerItemSO[] itemCatalog;
     [SerializeField] private Transform rightHandAnchor;
@@ -32,6 +32,7 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
     private GameObject owner;
 
     public GameObject Owner => owner != null ? owner : gameObject;
+    public int SlotCount => MaxSlots;
 
     private bool IsLocalPlayer => Object == null || Object.HasInputAuthority;
 
@@ -95,13 +96,14 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         if (itemId == 0 || amount <= 0)
             return false;
 
+        int emptySlots = 0;
         for (int i = 0; i < MaxSlots; i++)
         {
-            if (ItemIds[i] == itemId || ItemIds[i] == 0)
-                return true;
+            if (ItemIds[i] == 0 || ItemCounts[i] <= 0)
+                emptySlots++;
         }
 
-        return false;
+        return emptySlots >= amount;
     }
 
     public int GetItemCount(int itemId)
@@ -109,13 +111,14 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         if (itemId == 0)
             return 0;
 
+        int count = 0;
         for (int i = 0; i < MaxSlots; i++)
         {
             if (ItemIds[i] == itemId)
-                return ItemCounts[i];
+                count += Mathf.Max(0, ItemCounts[i]);
         }
 
-        return 0;
+        return count;
     }
 
     public bool TryGetSlot(int slotIndex, out int itemId, out int count)
@@ -136,30 +139,26 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         if (!CanMutateInventory(itemId, amount))
             return false;
 
+        if (!CanAddItem(itemId, amount))
+            return false;
+
+        int remaining = amount;
         for (int i = 0; i < MaxSlots; i++)
         {
-            if (ItemIds[i] == itemId)
-            {
-                ItemCounts.Set(i, ItemCounts[i] + amount);
-                SetHeldIfEmpty(itemId);
-                NotifyInventoryChanged();
-                return true;
-            }
+            if (ItemIds[i] != 0 && ItemCounts[i] > 0)
+                continue;
+
+            ItemIds.Set(i, itemId);
+            ItemCounts.Set(i, 1);
+            remaining--;
+
+            if (remaining <= 0)
+                break;
         }
 
-        for (int i = 0; i < MaxSlots; i++)
-        {
-            if (ItemIds[i] == 0)
-            {
-                ItemIds.Set(i, itemId);
-                ItemCounts.Set(i, amount);
-                SetHeldIfEmpty(itemId);
-                NotifyInventoryChanged();
-                return true;
-            }
-        }
-
-        return false;
+        SetHeldIfEmpty(itemId);
+        NotifyInventoryChanged();
+        return true;
     }
 
     public bool TryRemoveItem(int itemId, int amount = 1)
@@ -167,31 +166,33 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         if (!CanMutateInventory(itemId, amount))
             return false;
 
+        if (GetItemCount(itemId) < amount)
+            return false;
+
+        int remaining = amount;
         for (int i = 0; i < MaxSlots; i++)
         {
             if (ItemIds[i] != itemId)
                 continue;
 
-            int currentCount = ItemCounts[i];
-            if (currentCount < amount)
-                return false;
+            ItemIds.Set(i, 0);
+            ItemCounts.Set(i, 0);
+            remaining--;
 
-            int nextCount = currentCount - amount;
-            ItemCounts.Set(i, nextCount);
-            if (nextCount <= 0)
-            {
-                ItemIds.Set(i, 0);
-                ItemCounts.Set(i, 0);
-
-                if (HeldItemId == itemId)
-                    HeldItemId = FindFirstItemId();
-            }
-
-            NotifyInventoryChanged();
-            return true;
+            if (remaining <= 0)
+                break;
         }
 
-        return false;
+        if (remaining > 0)
+            return false;
+
+        CompactSlots();
+
+        if (HeldItemId == itemId && !HasItem(itemId))
+            HeldItemId = FindFirstItemId();
+
+        NotifyInventoryChanged();
+        return true;
     }
 
     public void RequestPickup(NetworkInventoryItem worldItem)
@@ -384,6 +385,28 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         return 0;
     }
 
+    private void CompactSlots()
+    {
+        int writeIndex = 0;
+        for (int readIndex = 0; readIndex < MaxSlots; readIndex++)
+        {
+            int itemId = ItemIds[readIndex];
+            int count = ItemCounts[readIndex];
+            if (itemId == 0 || count <= 0)
+                continue;
+
+            if (writeIndex != readIndex)
+            {
+                ItemIds.Set(writeIndex, itemId);
+                ItemCounts.Set(writeIndex, count);
+                ItemIds.Set(readIndex, 0);
+                ItemCounts.Set(readIndex, 0);
+            }
+
+            writeIndex++;
+        }
+    }
+
     private void NotifyInventoryChanged()
     {
         lastInventoryHash = CalculateInventoryHash();
@@ -461,7 +484,7 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         if (heldVisualInstance == null)
             return;
 
-        Vector3 itemOffset = item != null ? item.localPosition : Vector3.zero;
+        Vector3 itemOffset = item != null ? item.LocalPosition : Vector3.zero;
         Vector3 basePosition = IsLocalPlayer ? firstPersonHeldLocalPosition : thirdPersonHeldLocalPosition;
         Vector3 baseEuler = IsLocalPlayer ? firstPersonHeldLocalEuler : thirdPersonHeldLocalEuler;
 

@@ -6,12 +6,14 @@ public class PlayerItemSO : ScriptableObject
     [Tooltip("Network inventory id. Keep this unique and stable once used in a saved scene.")]
     public int itemId;
 
-    public string itemName;
-    public string description; 
+    public Sprite ItemSprite;
 
-    public Vector3 localPosition;
+    public string ItemName;
+    public string Description; 
 
-    public bool useable; 
+    public Vector3 LocalPosition;
+
+    public bool Useable; 
 
     [Tooltip("Network/world prefab used when this item is dropped.")]
     public GameObject ItemPrefab;

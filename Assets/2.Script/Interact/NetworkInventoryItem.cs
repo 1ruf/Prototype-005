@@ -3,8 +3,11 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(NetworkObject))]
-public class NetworkInventoryItem : NetworkBehaviour, IInteractable, IPlayerInteractable, IHoldInteractable, IInteractionFailureProvider
+public class NetworkInventoryItem : NetworkBehaviour, IInteractable, IPlayerInteractable, IHoldInteractable, IInteractionFailureProvider, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
+    [SerializeField] private string fallbackInteractionText = "Item";
+    [SerializeField] private string actionText = "Pick Up";
+    [SerializeField] private int interactionPriority = 100;
     [SerializeField] private PlayerItemSO item;
     [SerializeField] private float pickupDistance = 3f;
     [SerializeField] private float requiredHoldTime;
@@ -17,6 +20,9 @@ public class NetworkInventoryItem : NetworkBehaviour, IInteractable, IPlayerInte
     public int ItemId => item != null ? item.itemId : 0;
     public float PickupDistance => pickupDistance;
     public float RequiredHoldTime => Mathf.Max(0f, requiredHoldTime);
+    public string InteractionText => item != null && !string.IsNullOrWhiteSpace(item.ItemName) ? item.ItemName : fallbackInteractionText;
+    public string InteractionActionText => actionText;
+    public int InteractionPriority => interactionPriority;
 
     private void Awake()
     {

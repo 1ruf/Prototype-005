@@ -453,8 +453,8 @@ public class NetworkPlayerHidingComponent : NetworkBehaviour, INetworkEntityComp
             if (originalHidingVirtualCameraPriorityCached)
                 SetCinemachineCameraPriority(activeHidingVirtualCamera, originalHidingVirtualCameraPriority);
 
-            activeHidingVirtualCamera.enabled = originalHidingVirtualCameraEnabled;
-            activeHidingVirtualCamera.gameObject.SetActive(originalHidingVirtualCameraGameObjectActive);
+            activeHidingVirtualCamera.enabled = false;
+            activeHidingVirtualCamera.gameObject.SetActive(false);
         }
 
         activeHidingVirtualCamera = null;

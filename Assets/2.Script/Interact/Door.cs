@@ -4,8 +4,12 @@ using DG.Tweening;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(NetworkObject))]
-public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILockable, IUnlockable, IHoldInteractable, IInteractionFailureProvider
+public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILockable, IUnlockable, IHoldInteractable, IInteractionFailureProvider, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
+    [SerializeField] private string interactionText = "Door";
+    [SerializeField] private string openActionText = "Open";
+    [SerializeField] private string closeActionText = "Close";
+    [SerializeField] private int interactionPriority = 10;
     [SerializeField] private Vector3 closedRotation = Vector3.zero;
     [SerializeField] private Vector3 openRotation = new Vector3(0, 120, 0);
     [SerializeField] private bool invertPlayerSideOpenDirection;
@@ -35,6 +39,9 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
     public bool IsLocked => Object != null ? IsLockedState : localLocked;
     public bool IsBroken => Object != null ? IsBrokenState : localBroken;
     public float RequiredHoldTime => Mathf.Max(0f, requiredHoldTime);
+    public string InteractionText => interactionText;
+    public string InteractionActionText => IsOpen ? closeActionText : openActionText;
+    public int InteractionPriority => interactionPriority;
 
     public override void Spawned()
     {

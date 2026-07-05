@@ -3,8 +3,11 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(NetworkObject))]
-public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IPlayerInteractable, IHoldInteractable, IInteractionFailureProvider
+public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IPlayerInteractable, IHoldInteractable, IInteractionFailureProvider, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
+    [SerializeField] private string interactionText;
+    [SerializeField] private string actionText = "Use";
+    [SerializeField] private int interactionPriority = 80;
     [SerializeField] private PlayerItemSO requiredItem;
     [SerializeField] private float useDistance = 3f;
     [SerializeField] private float requiredHoldTime;
@@ -16,6 +19,18 @@ public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IP
     public int RequiredItemId => requiredItem != null ? requiredItem.itemId : 0;
     public float UseDistance => useDistance;
     public float RequiredHoldTime => Mathf.Max(0f, requiredHoldTime);
+    public string InteractionText
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(interactionText))
+                return interactionText;
+
+            return gameObject.name;
+        }
+    }
+    public string InteractionActionText => actionText;
+    public int InteractionPriority => interactionPriority;
 
     protected virtual void Awake()
     {
@@ -105,8 +120,8 @@ public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IP
 
         if (!inventory.HasItem(RequiredItemId, 1))
         {
-            string itemName = requiredItem != null && !string.IsNullOrWhiteSpace(requiredItem.itemName)
-                ? requiredItem.itemName
+            string itemName = requiredItem != null && !string.IsNullOrWhiteSpace(requiredItem.ItemName)
+                ? requiredItem.ItemName
                 : "Required item";
             message = $"{itemName} is required.";
             return true;

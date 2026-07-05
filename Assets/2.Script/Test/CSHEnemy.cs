@@ -1467,7 +1467,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             if (enemy.Object != null && !enemy.Object.HasStateAuthority)
                 continue;
 
-            if (enemy.IsChasingTransform(player.transform) || enemy.CanCurrentlySee(player))
+            if (enemy.CanCurrentlySee(player))
                 return true;
         }
 
