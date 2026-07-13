@@ -369,6 +369,7 @@ GameObject:
   - component: {fileID: 872300000000000001}
   - component: {fileID: 6213129680396904484}
   - component: {fileID: 2521670012594602900}
+  - component: {fileID: 872410000000000001}
   - component: {fileID: 5759194197070490}
   - component: {fileID: 3515404146114700444}
   - component: {fileID: 872310000000000001}
@@ -463,6 +464,7 @@ MonoBehaviour:
   _acceleration: 90
   _deceleration: 90
   _mass: 7
+  _stamina: {fileID: 872410000000000001}
   _camAnimator: {fileID: 0}
   _visualAnimator: {fileID: 7061721620346302062}
   _visualAnimatorController: {fileID: 9100000, guid: 3f4594a9dfb54da4fb6c88d39fbbce42, type: 2}
@@ -484,6 +486,23 @@ MonoBehaviour:
   _IsMoving:
     _value: 0
   _VisualAnimationSpeed: 0
+--- !u!114 &872410000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 500897660906067193}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8b3d4c12e6844d69d1e6f4adf413901, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxStamina: 100
+  drainPerSecond: 18
+  recoverPerSecond: 15
+  recoverDelay: 0.6
+  exhaustedRecoveryThreshold: 0.2
 --- !u!114 &5759194197070490
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -580,11 +599,18 @@ MonoBehaviour:
   dropKey: 103
   dropForwardOffset: 1.25
   dropUpOffset: 0.35
+  dropGroundProbeHeight: 1.5
+  dropGroundProbeDistance: 4
+  dropGroundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  dropRequestTimeout: 1.25
   firstPersonHeldLocalPosition: {x: 0.26, y: -0.46, z: 0.62}
   firstPersonHeldLocalEuler: {x: 0, y: 0, z: 0}
   thirdPersonHeldLocalPosition: {x: 0.03, y: -0.12, z: 0.06}
   thirdPersonHeldLocalEuler: {x: 0, y: 0, z: 0}
   _HeldItemId: 0
+  _HeldSlotIndex: 0
 --- !u!114 &872390000000000001
 MonoBehaviour:
   m_ObjectHideFlags: 0

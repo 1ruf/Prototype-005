@@ -23,6 +23,8 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
     private bool lastActive;
     private bool thirdPersonPresentationSuppressed;
     private bool itemInstanceFromPool;
+    private bool heldItemStoredForHiding;
+    private bool heldItemActiveBeforeHiding;
     private NetworkPlayerHidingComponent hidingComponent;
     private GameObject owner;
 
@@ -215,6 +217,8 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
 
     public void ForceStoreHeldItemForHiding()
     {
+        StoreHeldItemStateForHiding();
+
         if (Object == null || !networkSpawned)
         {
             localHeldItemVisible = false;
@@ -242,6 +246,33 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
         }
     }
 
+    public void RestoreHeldItemAfterHiding()
+    {
+        bool restoreActive = heldItemStoredForHiding && heldItemActiveBeforeHiding;
+        heldItemStoredForHiding = false;
+        heldItemActiveBeforeHiding = false;
+
+        if (Object == null || !networkSpawned)
+        {
+            localHeldItemVisible = true;
+            localHeldItemActive = restoreActive;
+            ApplyNetworkItemState(true);
+            return;
+        }
+
+        if (Object.HasStateAuthority)
+        {
+            HeldItemVisible = true;
+            HeldItemActive = restoreActive;
+            RPC_ApplyRestoredAfterHiding(restoreActive);
+            ApplyNetworkItemState(true);
+            return;
+        }
+
+        if (Object.HasInputAuthority)
+            RPC_RequestRestoreAfterHiding(restoreActive);
+    }
+
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_RequestStoreForHiding()
     {
@@ -255,6 +286,22 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
     {
         localHeldItemVisible = false;
         localHeldItemActive = false;
+        ApplyNetworkItemState(true);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_RequestRestoreAfterHiding(NetworkBool active)
+    {
+        HeldItemVisible = true;
+        HeldItemActive = active;
+        RPC_ApplyRestoredAfterHiding(active);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    private void RPC_ApplyRestoredAfterHiding(NetworkBool active)
+    {
+        localHeldItemVisible = true;
+        localHeldItemActive = active;
         ApplyNetworkItemState(true);
     }
 
@@ -303,6 +350,15 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
         itemInstance.Initialize(this);
     }
 
+    private void StoreHeldItemStateForHiding()
+    {
+        if (heldItemStoredForHiding)
+            return;
+
+        heldItemActiveBeforeHiding = GetHeldItemActive();
+        heldItemStoredForHiding = true;
+    }
+
     private void ReleaseItemInstance()
     {
         if (itemInstance == null || !itemInstanceFromPool)
@@ -321,7 +377,7 @@ public class NetworkPlayerItemHolder : NetworkBehaviour, INetworkEntityComponent
             playerMovement = GetComponent<PlayerMovement>() ?? GetComponentInParent<PlayerMovement>();
 
         if (hidingComponent == null)
-            hidingComponent = GetComponent<NetworkPlayerHidingComponent>() ?? GetComponentInParent<NetworkPlayerHidingComponent>();
+            hidingComponent = Owner.GetComponentInChildren<NetworkPlayerHidingComponent>(true);
 
         if (firstPersonAnchor == null)
         {

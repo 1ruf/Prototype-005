@@ -5,13 +5,11 @@ using Photon.Voice.Fusion;
 using Photon.Voice.Unity;
 using Photon.Voice.Unity.UtilityScripts;
 using UnityEditor;
-using UnityEditor.Callbacks;
 using UnityEditorInternal;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-[InitializeOnLoad]
 public static class NetworkSceneSetupTool
 {
     private const string CSHScenePath = "Assets/1.Scenes/CSHObunga/CSHObunga.unity";
@@ -19,112 +17,6 @@ public static class NetworkSceneSetupTool
     private const string PlayerPrefabPath = NetworkPrefabFolder + "/NetworkPlayer.prefab";
     private const string EnemyPrefabPath = NetworkPrefabFolder + "/NetworkCSHEnemy.prefab";
     private const string PlayerVisualControllerPath = "Assets/Resources/PlayerVisual.controller";
-    private static bool autoSetupQueued;
-
-    static NetworkSceneSetupTool()
-    {
-        EditorApplication.delayCall += AutoSetupProjectIfNeeded;
-        EditorSceneManager.sceneOpened += (_, _) => QueueAutoSetup();
-    }
-
-    [DidReloadScripts]
-    private static void OnScriptsReloaded()
-    {
-        QueueAutoSetup();
-    }
-
-    private static void QueueAutoSetup()
-    {
-        if (autoSetupQueued)
-            return;
-
-        autoSetupQueued = true;
-        EditorApplication.delayCall += AutoSetupProjectIfNeeded;
-    }
-
-    public static void QueueSetupForImport()
-    {
-        QueueAutoSetup();
-    }
-
-    private static void AutoSetupProjectIfNeeded()
-    {
-        autoSetupQueued = false;
-
-        if (Application.isPlaying)
-            return;
-
-        if (!NeedsSetup())
-            return;
-
-        Debug.Log("NetworkSceneSetupTool: applying Photon Fusion scene setup.");
-
-        Scene previousActiveScene = EditorSceneManager.GetActiveScene();
-        Scene cshScene = FindOpenScene(CSHScenePath);
-        bool openedTemporarily = !cshScene.IsValid();
-
-        if (openedTemporarily)
-            cshScene = EditorSceneManager.OpenScene(CSHScenePath, OpenSceneMode.Additive);
-
-        EditorSceneManager.SetActiveScene(cshScene);
-        SetupCurrentScene();
-        EditorSceneManager.SaveScene(cshScene);
-
-        if (previousActiveScene.IsValid() && previousActiveScene.isLoaded)
-            EditorSceneManager.SetActiveScene(previousActiveScene);
-
-        if (openedTemporarily)
-            EditorSceneManager.CloseScene(cshScene, true);
-    }
-
-    private static bool NeedsSetup()
-    {
-        bool missingPrefabs = AssetDatabase.LoadAssetAtPath<NetworkObject>(PlayerPrefabPath) == null ||
-                              AssetDatabase.LoadAssetAtPath<NetworkObject>(EnemyPrefabPath) == null;
-
-        if (missingPrefabs)
-            return true;
-
-        GameObject playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath);
-        if (playerPrefab == null ||
-            MissingPlayerAnimationSetup(playerPrefab) ||
-            MissingPlayerComponentOrganization(playerPrefab) ||
-            !HasComponentByTypeName(playerPrefab, "CameraShakeController") ||
-            playerPrefab.GetComponentInChildren<VoiceNetworkObject>(true) == null ||
-            playerPrefab.GetComponentInChildren<NetworkPlayerVoiceComponent>(true) == null ||
-            playerPrefab.GetComponentInChildren<Speaker>(true) == null ||
-            playerPrefab.GetComponentInChildren<NetworkHealthComponent>(true) == null ||
-            playerPrefab.GetComponentInChildren<NetworkDeathComponent>(true) == null ||
-            playerPrefab.GetComponentInChildren<RagdollEntityComponent>(true) == null ||
-            MissingRagdollPartSetup(playerPrefab))
-            return true;
-
-        Scene cshScene = FindOpenScene(CSHScenePath);
-        if (!cshScene.IsValid())
-            return true;
-
-        Scene previousActiveScene = EditorSceneManager.GetActiveScene();
-        EditorSceneManager.SetActiveScene(cshScene);
-        bool missingManager = Object.FindFirstObjectByType<NetworkGameManager>() == null;
-
-        if (previousActiveScene.IsValid())
-            EditorSceneManager.SetActiveScene(previousActiveScene);
-
-        return missingManager;
-    }
-
-    private static Scene FindOpenScene(string path)
-    {
-        for (int i = 0; i < SceneManager.sceneCount; i++)
-        {
-            Scene scene = SceneManager.GetSceneAt(i);
-            if (scene.path == path)
-                return scene;
-        }
-
-        return default;
-    }
-
     [MenuItem("Tools/Prototype005/Setup CSH Photon Fusion Scene")]
     public static void SetupCSHScene()
     {
@@ -179,6 +71,8 @@ public static class NetworkSceneSetupTool
 
         EnsureComponent<NetworkObject>(clone);
         EnsureComponent<NetworkCharacterController>(clone);
+        EnsureComponent<NetworkInventory>(clone);
+        EnsureComponent<NetworkEmoteAudioPlayer>(clone);
         EnsurePlayerComponentOrganization(clone);
         EnsurePlayerAnimationSetup(clone);
         EnsureCameraShakeSetup(clone);
@@ -186,6 +80,7 @@ public static class NetworkSceneSetupTool
         EnsurePlayerHidingSetup(clone);
         EnsureNetworkEntitySetup(clone);
         EnsureRagdollSetup(clone);
+        ProductionArchitectureMigration.ApplyPlayerHierarchy(clone, true);
 
         NetworkObject prefab = SavePrefab(clone, PlayerPrefabPath);
         Object.DestroyImmediate(clone);
@@ -204,6 +99,7 @@ public static class NetworkSceneSetupTool
         serializedEnemy.FindProperty("target").objectReferenceValue = null;
         serializedEnemy.FindProperty("ui").objectReferenceValue = null;
         serializedEnemy.ApplyModifiedPropertiesWithoutUndo();
+        ProductionArchitectureMigration.ApplyEnemyHierarchy(clone);
 
         NetworkObject prefab = SavePrefab(clone, EnemyPrefabPath);
         Object.DestroyImmediate(clone);

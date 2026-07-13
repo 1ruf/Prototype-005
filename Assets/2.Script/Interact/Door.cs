@@ -20,6 +20,11 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
     [SerializeField] private float breakUpwardForce = 0.35f;
     [SerializeField] private float brokenDestroyDelay = 10f;
 
+    [Header("Network Request Security")]
+    [SerializeField] private ServerRequestValidationPolicy requestValidationPolicy = ServerRequestValidationPolicy.CreateInteractionDefault();
+    [SerializeField] private bool allowClientLockStateRequests;
+    [SerializeField] private bool allowClientBreakRequests;
+
     [Networked] public NetworkBool IsOpenState { get; private set; }
     [Networked] public NetworkBool IsLockedState { get; private set; }
     [Networked] public NetworkBool IsBrokenState { get; private set; }
@@ -34,6 +39,10 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
     private bool localLocked;
     private bool localBroken;
     private Collider[] cachedColliders;
+
+    private const int OpenRequestRateLimitScope = 101;
+    private const int LockRequestRateLimitScope = 102;
+    private const int BreakRequestRateLimitScope = 103;
 
     public bool IsOpen => Object != null ? IsOpenState : visualOpen;
     public bool IsLocked => Object != null ? IsLockedState : localLocked;
@@ -184,22 +193,88 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
         RPC_RequestBreak(direction);
     }
 
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_RequestSetOpen(NetworkBool open, Vector3 requestedOpenRotation)
+    [Rpc(RpcSources.Proxies, RpcTargets.StateAuthority)]
+    private void RPC_RequestSetOpen(NetworkBool open, Vector3 requestedOpenRotation, RpcInfo info = default)
     {
-        SetOpenStateAuthority(open, requestedOpenRotation);
+        if (!TryValidateClientRequest(info, OpenRequestRateLimitScope, out ServerRequestContext context))
+            return;
+
+        Vector3 authoritativeOpenRotation = GetActiveOpenRotation();
+        if (open)
+        {
+            PlayerMovement requester = ResolveRequesterPlayer(context.PlayerObject);
+            if (requester != null)
+            {
+                authoritativeOpenRotation = ResolveOpenRotation(requester);
+            }
+            else if (context.IsServerRequest && ServerRequestValidator.IsFinite(requestedOpenRotation))
+            {
+                authoritativeOpenRotation = requestedOpenRotation;
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        SetOpenStateAuthority(open, authoritativeOpenRotation);
     }
 
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_RequestSetLocked(NetworkBool locked)
+    [Rpc(RpcSources.Proxies, RpcTargets.StateAuthority)]
+    private void RPC_RequestSetLocked(NetworkBool locked, RpcInfo info = default)
     {
+        if (!TryValidateClientRequest(info, LockRequestRateLimitScope, out _)
+            || !allowClientLockStateRequests)
+            return;
+
         SetLockedStateAuthority(locked);
     }
 
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_RequestBreak(Vector3 direction)
+    [Rpc(RpcSources.Proxies, RpcTargets.StateAuthority)]
+    private void RPC_RequestBreak(Vector3 direction, RpcInfo info = default)
     {
-        BreakStateAuthority(direction);
+        if (!TryValidateClientRequest(info, BreakRequestRateLimitScope, out ServerRequestContext context)
+            || !allowClientBreakRequests)
+            return;
+
+        Vector3 authoritativeDirection;
+        if (context.PlayerObject != null)
+        {
+            authoritativeDirection = transform.position - context.PlayerObject.transform.position;
+        }
+        else if (context.IsServerRequest && ServerRequestValidator.IsFinite(direction))
+        {
+            authoritativeDirection = direction;
+        }
+        else
+        {
+            return;
+        }
+
+        BreakStateAuthority(authoritativeDirection);
+    }
+
+    private bool TryValidateClientRequest(RpcInfo info, int rateLimitScope, out ServerRequestContext context)
+    {
+        requestValidationPolicy ??= ServerRequestValidationPolicy.CreateInteractionDefault();
+        return ServerRequestValidator.TryValidate(
+            Runner,
+            Object,
+            transform,
+            info,
+            requestValidationPolicy,
+            rateLimitScope,
+            out context,
+            out _);
+    }
+
+    private static PlayerMovement ResolveRequesterPlayer(NetworkObject playerObject)
+    {
+        if (playerObject == null)
+            return null;
+
+        return playerObject.GetComponent<PlayerMovement>()
+            ?? playerObject.GetComponentInChildren<PlayerMovement>(true);
     }
 
     private void SetOpenStateAuthority(bool open, Vector3 requestedOpenRotation)

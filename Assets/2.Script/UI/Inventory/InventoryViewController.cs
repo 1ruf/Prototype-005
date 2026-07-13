@@ -81,7 +81,7 @@ public class InventoryViewController : MonoBehaviour
     {
         CacheSlots();
 
-        int heldItemId = localInventory != null ? localInventory.HeldItemId : 0;
+        int heldSlotIndex = localInventory != null ? localInventory.HighlightedSlotIndex : -1;
         for (int i = 0; i < slots.Length; i++)
         {
             PlayerItemSO item = null;
@@ -92,7 +92,7 @@ public class InventoryViewController : MonoBehaviour
                 continue;
 
             slots[i].SetItem(item);
-            slots[i].SetOutline(item != null && item.itemId == heldItemId);
+            slots[i].SetOutline(item != null && i == heldSlotIndex);
         }
     }
 
@@ -253,7 +253,7 @@ public class InventoryViewController : MonoBehaviour
         tooltipText.fontSize = 18f;
         tooltipText.raycastTarget = false;
         tooltipText.alignment = TextAlignmentOptions.MidlineLeft;
-        tooltipText.enableWordWrapping = false;
+        tooltipText.textWrappingMode = TextWrappingModes.NoWrap;
 
         HideTooltip();
     }

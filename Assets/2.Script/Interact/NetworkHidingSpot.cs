@@ -6,6 +6,7 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
 {
     private static readonly Dictionary<int, NetworkHidingSpot> Spots = new();
     private static readonly Dictionary<int, uint> Occupants = new();
+    private const int StableIdSeed = 486187739;
 
     [SerializeField] private string interactionText = "Locker";
     [SerializeField] private string actionText = "Hide";
@@ -16,6 +17,7 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
     [SerializeField] private Transform playerHiddenPose;
     [SerializeField] private Transform exitPose;
     [SerializeField] private float requiredHoldTime;
+    [SerializeField, Min(0.1f)] private float maxUseDistance = 3f;
     [Header("Camera")]
     [SerializeField] private Behaviour hidingVirtualCamera;
     [SerializeField] private int hidingCameraPriority = 1000;
@@ -26,7 +28,9 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
     [SerializeField] private float enterDuration = 1f;
     [SerializeField] private float exitDuration = 1f;
 
-    public int SpotId => spotId;
+    private int effectiveSpotId;
+
+    public int SpotId => effectiveSpotId > 0 ? effectiveSpotId : spotId;
     public Transform CameraPose => cameraPose != null ? cameraPose : transform;
     public Transform VisualPose => visualPose != null ? visualPose : transform;
     public Transform PlayerHiddenPose => playerHiddenPose != null ? playerHiddenPose : transform;
@@ -36,10 +40,16 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
     public int HidingCameraPriority => hidingCameraPriority;
     public float EnterDuration => Mathf.Max(0f, enterDuration);
     public float ExitDuration => Mathf.Max(0f, exitDuration);
-    public bool IsOccupied => Occupants.ContainsKey(spotId);
+    public bool IsOccupied => Occupants.ContainsKey(SpotId);
     public string InteractionText => interactionText;
     public string InteractionActionText => actionText;
     public int InteractionPriority => interactionPriority;
+
+    public bool IsWithinUseRange(Vector3 playerPosition)
+    {
+        float distance = Mathf.Max(0.1f, maxUseDistance);
+        return (transform.position - playerPosition).sqrMagnitude <= distance * distance;
+    }
 
     public static NetworkHidingSpot Find(int id)
     {
@@ -48,24 +58,26 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
 
     private void OnEnable()
     {
-        if (spotId <= 0)
+        effectiveSpotId = ResolveEffectiveSpotId();
+        if (effectiveSpotId <= 0)
         {
             Debug.LogWarning($"{nameof(NetworkHidingSpot)} on {name} has invalid spot id {spotId}.", this);
             return;
         }
 
-        if (Spots.TryGetValue(spotId, out NetworkHidingSpot existing) && existing != null && existing != this)
-            Debug.LogWarning($"Duplicate hiding spot id {spotId}: {existing.name} and {name}.", this);
+        if (effectiveSpotId != spotId)
+            Debug.LogWarning($"{nameof(NetworkHidingSpot)} on {name} resolved duplicate/invalid spot id {spotId} to stable id {effectiveSpotId}.", this);
 
-        Spots[spotId] = this;
+        Spots[effectiveSpotId] = this;
     }
 
     private void OnDisable()
     {
-        if (spotId > 0 && Spots.TryGetValue(spotId, out NetworkHidingSpot existing) && existing == this)
-            Spots.Remove(spotId);
+        int registeredSpotId = SpotId;
+        if (registeredSpotId > 0 && Spots.TryGetValue(registeredSpotId, out NetworkHidingSpot existing) && existing == this)
+            Spots.Remove(registeredSpotId);
 
-        Occupants.Remove(spotId);
+        Occupants.Remove(registeredSpotId);
     }
 
     public void Interact(PlayerMovement player)
@@ -114,10 +126,14 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
             return false;
 
         uint playerId = player.Object.Id.Raw;
-        if (Occupants.TryGetValue(spotId, out uint occupantId) && occupantId != playerId)
+        int id = SpotId;
+        if (id <= 0)
             return false;
 
-        Occupants[spotId] = playerId;
+        if (Occupants.TryGetValue(id, out uint occupantId) && occupantId != playerId)
+            return false;
+
+        Occupants[id] = playerId;
         return true;
     }
 
@@ -128,14 +144,21 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
 
     public void Release(NetworkPlayerHidingComponent player)
     {
-        if (player == null || player.Object == null)
+        if (player == null)
             return;
+
+        int id = SpotId;
+        if (player.Object == null)
+        {
+            Occupants.Remove(id);
+            return;
+        }
 
         uint playerId = player.Object.Id.Raw;
-        if (Occupants.TryGetValue(spotId, out uint occupantId) && occupantId != playerId)
+        if (Occupants.TryGetValue(id, out uint occupantId) && occupantId != playerId)
             return;
 
-        Occupants.Remove(spotId);
+        Occupants.Remove(id);
     }
 
     public void PlayEnterAnimation()
@@ -175,5 +198,77 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
 
         hidingVirtualCamera = camera as Behaviour;
         return hidingVirtualCamera;
+    }
+
+    private int ResolveEffectiveSpotId()
+    {
+        if (spotId > 0 && !HasDuplicateSerializedSpotId())
+            return spotId;
+
+        int stableId = BuildStableSceneSpotId();
+        while (stableId <= 0 || Spots.ContainsKey(stableId))
+            stableId++;
+
+        return stableId;
+    }
+
+    private bool HasDuplicateSerializedSpotId()
+    {
+        if (spotId <= 0 || !gameObject.scene.IsValid())
+            return spotId <= 0;
+
+        NetworkHidingSpot[] sceneSpots = FindObjectsByType<NetworkHidingSpot>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        int matches = 0;
+        foreach (NetworkHidingSpot sceneSpot in sceneSpots)
+        {
+            if (sceneSpot == null || sceneSpot.gameObject.scene != gameObject.scene)
+                continue;
+
+            if (sceneSpot.spotId != spotId)
+                continue;
+
+            matches++;
+            if (matches > 1)
+                return true;
+        }
+
+        return false;
+    }
+
+    private int BuildStableSceneSpotId()
+    {
+        unchecked
+        {
+            int hash = StableIdSeed;
+            string sceneName = gameObject.scene.IsValid() ? gameObject.scene.name : string.Empty;
+            AppendHash(ref hash, sceneName);
+            AppendHash(ref hash, GetHierarchyPath(transform));
+            return Mathf.Abs(hash == int.MinValue ? int.MaxValue : hash);
+        }
+    }
+
+    private static void AppendHash(ref int hash, string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return;
+
+        for (int i = 0; i < value.Length; i++)
+            hash = (hash * 31) ^ value[i];
+    }
+
+    private static string GetHierarchyPath(Transform target)
+    {
+        if (target == null)
+            return string.Empty;
+
+        string path = target.name;
+        Transform current = target.parent;
+        while (current != null)
+        {
+            path = current.name + "/" + path;
+            current = current.parent;
+        }
+
+        return path;
     }
 }

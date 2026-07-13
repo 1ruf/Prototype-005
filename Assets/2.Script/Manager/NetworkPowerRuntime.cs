@@ -3,6 +3,8 @@ using UnityEngine;
 
 public static class NetworkPowerRuntime
 {
+    public static event System.Action<string, bool> PowerStateChanged;
+
     public static void RegisterPowerable(string key, IPowerable powerable)
     {
         PowerController controller = GetPowerController();
@@ -20,7 +22,17 @@ public static class NetworkPowerRuntime
 
     public static void RequestToggle(string key)
     {
-        RequestSetPower(key, !GetPower(key));
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        PlayerMovement localPlayer = GetLocalPlayer();
+        if (localPlayer != null && localPlayer.Object != null)
+        {
+            localPlayer.RequestNetworkPowerToggle(key);
+            return;
+        }
+
+        ApplyPower(key, !GetPower(key));
     }
 
     public static void RequestSetPower(string key, bool value)
@@ -41,7 +53,11 @@ public static class NetworkPowerRuntime
     public static void ApplyPower(string key, bool value)
     {
         PowerController controller = GetPowerController();
-        controller?.SetPower(key, value);
+        if (controller == null)
+            return;
+
+        controller.SetPower(key, value);
+        PowerStateChanged?.Invoke(key, value);
     }
 
     public static bool GetPower(string key)
@@ -50,10 +66,23 @@ public static class NetworkPowerRuntime
         return controller != null && controller.GetPower(key);
     }
 
+    public static bool HasPowerState(string key)
+    {
+        PowerController controller = FindPowerController();
+        return controller != null && controller.HasPowerState(key);
+    }
+
     public static void InitializePowerIfUnknown(string key, bool value)
     {
         PowerController controller = GetPowerController();
-        controller?.SetInitialPower(key, value);
+        if (controller == null)
+            return;
+
+        bool wasKnown = controller.HasPowerState(key);
+        controller.SetInitialPower(key, value);
+
+        if (!wasKnown)
+            PowerStateChanged?.Invoke(key, controller.GetPower(key));
     }
 
     public static void ForEachPowerState(System.Action<string, bool> callback)

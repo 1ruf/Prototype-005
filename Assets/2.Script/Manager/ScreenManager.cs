@@ -145,7 +145,8 @@ public class ScreenManager : MonoBehaviour
             {
                 DebugInteractionRay(ray, true, candidate.HitInfo);
                 HandleInteraction(candidate.TargetComponent, candidate.PlayerInteraction, candidate.Interaction);
-                Highlight(true, candidate.TargetName, candidate.ActionText);
+                bool onCooldown = IsInteractionOnCooldown(candidate.TargetComponent);
+                Highlight(!onCooldown, candidate.TargetName, candidate.ActionText);
                 return;
             }
 
@@ -169,6 +170,9 @@ public class ScreenManager : MonoBehaviour
                 continue;
 
             if (!TryBuildInteractionCandidate(hit, out InteractionCandidate candidate))
+                continue;
+
+            if (IsInteractionOnCooldown(candidate.TargetComponent))
                 continue;
 
             if (!CanInteractAtCurrentDistance(candidate.TargetComponent))
@@ -334,7 +338,7 @@ public class ScreenManager : MonoBehaviour
         {
             ResetHoldInteraction(null, false);
             if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
-                InvokeInteraction(playerInteraction, interaction);
+                TryInvokeInteraction(targetComponent, playerInteraction, interaction);
             return;
         }
 
@@ -363,7 +367,7 @@ public class ScreenManager : MonoBehaviour
             return;
 
         holdInteractionTriggered = true;
-        InvokeInteraction(playerInteraction, interaction);
+        TryInvokeInteraction(targetComponent, playerInteraction, interaction);
     }
 
     private bool TryShowInteractionFailure(Component targetComponent)
@@ -388,8 +392,18 @@ public class ScreenManager : MonoBehaviour
         return holdInteractable != null ? holdInteractable.RequiredHoldTime : 0f;
     }
 
-    private void InvokeInteraction(IPlayerInteractable playerInteraction, IInteractable interaction)
+    private static bool IsInteractionOnCooldown(Component targetComponent)
     {
+        IInteractionCooldown cooldown = targetComponent.GetComponentInParent<IInteractionCooldown>();
+        return cooldown != null && cooldown.IsInteractionOnCooldown;
+    }
+
+    private void TryInvokeInteraction(Component targetComponent, IPlayerInteractable playerInteraction, IInteractable interaction)
+    {
+        IInteractionCooldown cooldown = targetComponent.GetComponentInParent<IInteractionCooldown>();
+        if (cooldown != null && !cooldown.TryBeginInteractionCooldown())
+            return;
+
         if (playerInteraction != null)
         {
             playerInteraction.Interact(localPlayer);

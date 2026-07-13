@@ -3,7 +3,6 @@ using Fusion;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-[RequireComponent(typeof(NetworkObject))]
 public sealed class NetworkEmoteAudioPlayer : NetworkBehaviour
 {
     [SerializeField] private AudioSource audioSource;

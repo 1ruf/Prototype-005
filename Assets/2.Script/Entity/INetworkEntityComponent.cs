@@ -1,7 +1,3 @@
-using UnityEngine;
-
-public interface INetworkEntityComponent
+public interface INetworkEntityComponent : IEntityComponent
 {
-    GameObject Owner { get; }
-    void Initialize(GameObject owner);
 }

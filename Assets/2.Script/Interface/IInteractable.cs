@@ -29,3 +29,9 @@ public interface IInteractionFailureProvider
 {
     bool TryGetInteractionFailureMessage(PlayerMovement player, out string message);
 }
+
+public interface IInteractionCooldown
+{
+    bool IsInteractionOnCooldown { get; }
+    bool TryBeginInteractionCooldown();
+}

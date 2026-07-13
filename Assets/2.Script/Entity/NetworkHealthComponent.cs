@@ -7,11 +7,18 @@ public class NetworkHealthComponent : NetworkBehaviour, INetworkEntityComponent
 {
     [SerializeField] private float maxHealth = 100f;
 
+    [Header("Network Request Security")]
+    [SerializeField] private ServerRequestValidationPolicy ownerRequestValidationPolicy = ServerRequestValidationPolicy.CreateOwnerRequestDefault();
+    [SerializeField] private bool allowInputAuthorityReviveRequests;
+
     [Networked] public float CurrentHealth { get; private set; }
     [Networked] public NetworkBool IsDead { get; private set; }
 
     private GameObject owner;
     private bool deathNotified;
+
+    private const int DamageRequestRateLimitScope = 301;
+    private const int ReviveRequestRateLimitScope = 302;
 
     public event Action<NetworkHealthComponent> Died;
     public GameObject Owner => owner != null ? owner : gameObject;
@@ -50,7 +57,7 @@ public class NetworkHealthComponent : NetworkBehaviour, INetworkEntityComponent
 
     public void Damage(float amount)
     {
-        if (amount <= 0f || IsDead)
+        if (!ServerRequestValidator.IsFinite(amount) || amount <= 0f || IsDead)
             return;
 
         if (Object == null || Object.HasStateAuthority)
@@ -78,16 +85,41 @@ public class NetworkHealthComponent : NetworkBehaviour, INetworkEntityComponent
         RPC_RequestRevive();
     }
 
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_RequestDamage(float amount)
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_RequestDamage(float amount, RpcInfo info = default)
     {
-        ApplyDamage(amount);
+        if (!TryValidateOwnerRequest(info, DamageRequestRateLimitScope)
+            || !ServerRequestValidator.IsFinite(amount)
+            || amount <= 0f)
+            return;
+
+        float boundedAmount = Mathf.Min(amount, Mathf.Max(0f, maxHealth));
+        if (boundedAmount > 0f)
+            ApplyDamage(boundedAmount);
     }
 
-    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-    private void RPC_RequestRevive()
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_RequestRevive(RpcInfo info = default)
     {
+        if (!allowInputAuthorityReviveRequests
+            || !TryValidateOwnerRequest(info, ReviveRequestRateLimitScope))
+            return;
+
         SetAlive();
+    }
+
+    private bool TryValidateOwnerRequest(RpcInfo info, int rateLimitScope)
+    {
+        ownerRequestValidationPolicy ??= ServerRequestValidationPolicy.CreateOwnerRequestDefault();
+        return ServerRequestValidator.TryValidateOwnerRequest(
+            Runner,
+            Object,
+            Owner.transform,
+            info,
+            ownerRequestValidationPolicy,
+            rateLimitScope,
+            out _,
+            out _);
     }
 
     private void ApplyDamage(float amount)

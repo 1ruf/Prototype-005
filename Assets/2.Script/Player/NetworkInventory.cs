@@ -3,55 +3,63 @@ using Fusion;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-[RequireComponent(typeof(NetworkObject))]
-public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
+public class NetworkInventory : NetworkEntityBehaviour
 {
     public const int MaxSlots = 3;
 
     [SerializeField] private PlayerItemSO[] itemCatalog;
-    [SerializeField] private Transform rightHandAnchor;
-    [SerializeField] private KeyCode dropKey = KeyCode.G;
+    [SerializeField, HideInInspector] private Transform rightHandAnchor;
+    [SerializeField, HideInInspector] private KeyCode dropKey = KeyCode.G;
     [SerializeField] private float dropForwardOffset = 1.25f;
     [SerializeField] private float dropUpOffset = 0.35f;
-    [Header("Held Visual Pose")]
-    [SerializeField] private Vector3 firstPersonHeldLocalPosition = new Vector3(0.26f, -0.46f, 0.62f);
-    [SerializeField] private Vector3 firstPersonHeldLocalEuler = new Vector3(0f, 0f, 0f);
-    [SerializeField] private Vector3 thirdPersonHeldLocalPosition = new Vector3(0.03f, -0.12f, 0.06f);
-    [SerializeField] private Vector3 thirdPersonHeldLocalEuler = new Vector3(0f, 0f, 0f);
+    [SerializeField] private float dropGroundProbeHeight = 1.5f;
+    [SerializeField] private float dropGroundProbeDistance = 4f;
+    [SerializeField] private LayerMask dropGroundMask = ~0;
+    [SerializeField] private float dropRequestTimeout = 1.25f;
+    [SerializeField, HideInInspector] private Vector3 firstPersonHeldLocalPosition = new Vector3(0.26f, -0.46f, 0.62f);
+    [SerializeField, HideInInspector] private Vector3 firstPersonHeldLocalEuler = new Vector3(0f, 0f, 0f);
+    [SerializeField, HideInInspector] private Vector3 thirdPersonHeldLocalPosition = new Vector3(0.03f, -0.12f, 0.06f);
+    [SerializeField, HideInInspector] private Vector3 thirdPersonHeldLocalEuler = new Vector3(0f, 0f, 0f);
+    [SerializeField] private InventoryHeldItemPresentation heldItemPresentation;
+    [SerializeField] private PlayerInventoryInput input;
 
     [Networked, Capacity(MaxSlots)] private NetworkArray<int> ItemIds => default;
     [Networked, Capacity(MaxSlots)] private NetworkArray<int> ItemCounts => default;
     [Networked] public int HeldItemId { get; private set; }
+    [Networked] public int HeldSlotIndex { get; private set; }
 
     public event Action InventoryChanged;
 
-    private GameObject heldVisualInstance;
-    private int visibleHeldItemId = int.MinValue;
     private int lastInventoryHash;
     private NetworkPlayerHidingComponent hidingComponent;
-    private GameObject owner;
+    private int pendingDropSlotIndex = -1;
+    private int pendingDropItemId;
+    private float pendingDropStartedAt;
+    private bool heldSlotStoredForHiding;
+    private int heldSlotBeforeHiding = -1;
 
-    public GameObject Owner => owner != null ? owner : gameObject;
     public int SlotCount => MaxSlots;
+    public int HighlightedSlotIndex => IsHeldSlotLocallySuppressed() ? -1 : HeldSlotIndex;
+    public bool CanProcessLocalInput => !IsNetworkObjectWaitingForSpawn() && IsLocalPlayer;
 
     private bool IsLocalPlayer => Object == null || Object.HasInputAuthority;
 
     private void Awake()
     {
-        Initialize(gameObject);
+        Initialize(EntityOwnerResolver.Resolve(this));
         InventoryItemRegistry.RegisterRange(itemCatalog);
     }
 
-    public void Initialize(GameObject entityOwner)
+    public override void Initialize(GameObject entityOwner)
     {
-        owner = entityOwner != null ? entityOwner : gameObject;
-        ResolveRightHandAnchor();
+        base.Initialize(entityOwner);
+        ResolveSupportComponents();
     }
 
     public override void Spawned()
     {
         InventoryItemRegistry.RegisterRange(itemCatalog);
-        ResolveRightHandAnchor();
+        ResolveSupportComponents();
         RefreshHeldVisual(true);
         lastInventoryHash = CalculateInventoryHash();
         InventoryChanged?.Invoke();
@@ -64,9 +72,6 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 
         if (Object != null)
             return;
-
-        if (!EmoteWheelController.IsBlockingGameplayInput && CanUseInventoryItems() && Input.GetKeyDown(dropKey) && HeldItemId != 0)
-            RequestDropHeldItem();
 
         RefreshHeldVisual(false);
         CheckInventoryChanged();
@@ -82,8 +87,6 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         CheckInventoryChanged();
         TickHeldVisualPresentation();
 
-        if (!EmoteWheelController.IsBlockingGameplayInput && IsLocalPlayer && CanUseInventoryItems() && Input.GetKeyDown(dropKey) && HeldItemId != 0)
-            RequestDropHeldItem();
     }
 
     public bool HasItem(int itemId, int amount = 1)
@@ -156,7 +159,7 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
                 break;
         }
 
-        SetHeldIfEmpty(itemId);
+        SetHeldIfEmpty(FindFirstSlotWithItem(itemId));
         NotifyInventoryChanged();
         return true;
     }
@@ -170,6 +173,8 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
             return false;
 
         int remaining = amount;
+        int removedSlot = -1;
+        bool removedHeldSlot = false;
         for (int i = 0; i < MaxSlots; i++)
         {
             if (ItemIds[i] != itemId)
@@ -177,6 +182,9 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 
             ItemIds.Set(i, 0);
             ItemCounts.Set(i, 0);
+            if (removedSlot < 0)
+                removedSlot = i;
+            removedHeldSlot |= i == HeldSlotIndex;
             remaining--;
 
             if (remaining <= 0)
@@ -186,10 +194,7 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         if (remaining > 0)
             return false;
 
-        CompactSlots();
-
-        if (HeldItemId == itemId && !HasItem(itemId))
-            HeldItemId = FindFirstItemId();
+        CompactSlotsAndRefreshHeldSlot(removedSlot, removedHeldSlot);
 
         NotifyInventoryChanged();
         return true;
@@ -198,6 +203,9 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
     public void RequestPickup(NetworkInventoryItem worldItem)
     {
         if (!CanUseInventoryItems())
+            return;
+
+        if (IsDropRequestPending())
             return;
 
         if (worldItem == null || worldItem.Object == null)
@@ -223,6 +231,9 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         if (!CanUseInventoryItems())
             return;
 
+        if (IsDropRequestPending())
+            return;
+
         if (target == null || target.Object == null)
             return;
 
@@ -243,7 +254,7 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 
     public void RequestDropHeldItem()
     {
-        RequestDropItem(HeldItemId);
+        RequestDropSlot(HeldSlotIndex);
     }
 
     public void RequestDropItem(int itemId)
@@ -251,22 +262,40 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         if (!CanUseInventoryItems())
             return;
 
-        if (itemId == 0)
+        int slotIndex = ResolveSlotIndexForItem(itemId);
+        if (slotIndex < 0)
+            return;
+
+        RequestDropSlot(slotIndex);
+    }
+
+    public void RequestDropSlot(int slotIndex)
+    {
+        if (!CanUseInventoryItems())
+            return;
+
+        if (!IsOccupiedSlot(slotIndex))
+            return;
+
+        if (IsDropRequestPending())
             return;
 
         if (Object == null)
         {
-            DropItemStateAuthority(itemId);
+            DropSlotStateAuthority(slotIndex);
             return;
         }
 
         if (Object.HasStateAuthority)
         {
-            DropItemStateAuthority(itemId);
+            DropSlotStateAuthority(slotIndex);
             return;
         }
 
-        RPC_RequestDropItem(itemId);
+        SetPendingDrop(slotIndex);
+        RPC_RequestDropSlot(slotIndex);
+        RefreshHeldVisual(true);
+        InventoryChanged?.Invoke();
     }
 
     public void RequestSetHeldItem(int itemId)
@@ -274,17 +303,32 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         if (!CanUseInventoryItems())
             return;
 
-        if (itemId != 0 && !HasItem(itemId))
+        int slotIndex = itemId == 0 ? -1 : FindFirstSlotWithItem(itemId);
+        if (itemId != 0 && slotIndex < 0)
+            return;
+
+        RequestSetHeldSlot(slotIndex);
+    }
+
+    public void RequestSetHeldSlot(int slotIndex)
+    {
+        if (!CanUseInventoryItems())
+            return;
+
+        if (IsDropRequestPending())
+            return;
+
+        if (slotIndex >= 0 && !IsOccupiedSlot(slotIndex))
             return;
 
         if (Object == null || Object.HasStateAuthority)
         {
-            HeldItemId = itemId;
+            SetHeldSlotState(slotIndex);
             NotifyInventoryChanged();
             return;
         }
 
-        RPC_RequestSetHeldItem(itemId);
+        RPC_RequestSetHeldSlot(slotIndex);
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
@@ -310,49 +354,49 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_RequestDropItem(int itemId)
+    private void RPC_RequestDropSlot(int slotIndex)
     {
         if (!CanUseInventoryItems())
             return;
 
-        DropItemStateAuthority(itemId);
+        DropSlotStateAuthority(slotIndex);
     }
 
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
-    private void RPC_RequestSetHeldItem(int itemId)
+    private void RPC_RequestSetHeldSlot(int slotIndex)
     {
         if (!CanUseInventoryItems())
             return;
 
-        if (itemId != 0 && !HasItem(itemId))
+        if (slotIndex >= 0 && !IsOccupiedSlot(slotIndex))
             return;
 
-        HeldItemId = itemId;
+        SetHeldSlotState(slotIndex);
         NotifyInventoryChanged();
     }
 
-    private void DropItemStateAuthority(int itemId)
+    private void DropSlotStateAuthority(int slotIndex)
     {
-        if (itemId == 0)
+        if (!IsOccupiedSlot(slotIndex))
             return;
 
-        if (!InventoryItemRegistry.TryGet(itemId, out PlayerItemSO item) || item.ItemPrefab == null)
-            return;
-
-        if (!TryRemoveItem(itemId, 1))
-            return;
-
-        Vector3 position = transform.position + transform.forward * dropForwardOffset + Vector3.up * dropUpOffset;
-        Quaternion rotation = Quaternion.LookRotation(transform.forward, Vector3.up);
-        NetworkObject prefabNetworkObject = item.ItemPrefab.GetComponent<NetworkObject>();
-
-        if (Runner != null && prefabNetworkObject != null)
+        int itemId = ItemIds[slotIndex];
+        if (!InventoryItemRegistry.TryGet(itemId, out PlayerItemSO item))
         {
-            Runner.Spawn(prefabNetworkObject, position, rotation);
+            Debug.LogWarning($"Cannot drop item {itemId}: item data is not registered.", this);
             return;
         }
 
-        Instantiate(item.ItemPrefab, position, rotation);
+        Vector3 position = ResolveDropPosition();
+        Quaternion rotation = Quaternion.LookRotation(Owner.transform.forward, Vector3.up);
+
+        if (!InventoryDropSpawnService.TrySpawnDroppedItem(item, Runner, position, rotation, this, out NetworkObject spawnedNetworkObject, out GameObject spawnedLocalObject))
+            return;
+
+        if (TryRemoveSlot(slotIndex, out _))
+            return;
+
+        InventoryDropSpawnService.RollbackSpawnedDrop(Runner, spawnedNetworkObject, spawnedLocalObject);
     }
 
     private bool CanMutateInventory(int itemId, int amount)
@@ -365,28 +409,37 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 
     private bool IsNetworkObjectWaitingForSpawn()
     {
-        return GetComponent<NetworkObject>() != null && (Object == null || !Object.IsValid);
+        return GetComponentInParent<NetworkObject>() != null && (Object == null || !Object.IsValid);
     }
 
-    private void SetHeldIfEmpty(int itemId)
+    private void SetHeldIfEmpty(int slotIndex)
     {
         if (HeldItemId == 0)
-            HeldItemId = itemId;
+            SetHeldSlotState(slotIndex);
     }
 
-    private int FindFirstItemId()
+    private bool TryRemoveSlot(int slotIndex, out int removedItemId)
     {
-        for (int i = 0; i < MaxSlots; i++)
-        {
-            if (ItemIds[i] != 0 && ItemCounts[i] > 0)
-                return ItemIds[i];
-        }
+        removedItemId = 0;
+        if (!CanMutateInventory(IsOccupiedSlot(slotIndex) ? ItemIds[slotIndex] : 0, 1))
+            return false;
 
-        return 0;
+        if (!IsOccupiedSlot(slotIndex))
+            return false;
+
+        removedItemId = ItemIds[slotIndex];
+        ItemIds.Set(slotIndex, 0);
+        ItemCounts.Set(slotIndex, 0);
+        CompactSlotsAndRefreshHeldSlot(slotIndex, slotIndex == HeldSlotIndex);
+        NotifyInventoryChanged();
+        return true;
     }
 
-    private void CompactSlots()
+    private void CompactSlotsAndRefreshHeldSlot(int removedSlot, bool removedHeldSlot)
     {
+        int previousHeldSlot = HeldSlotIndex;
+        int previousHeldItemId = HeldItemId;
+
         int writeIndex = 0;
         for (int readIndex = 0; readIndex < MaxSlots; readIndex++)
         {
@@ -405,6 +458,27 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 
             writeIndex++;
         }
+
+        if (removedHeldSlot)
+        {
+            SetHeldSlotState(FindFirstOccupiedSlot());
+            return;
+        }
+
+        if (previousHeldItemId == 0)
+        {
+            SetHeldSlotState(-1);
+            return;
+        }
+
+        int adjustedHeldSlot = previousHeldSlot;
+        if (removedSlot >= 0 && removedSlot < previousHeldSlot)
+            adjustedHeldSlot--;
+
+        if (IsOccupiedSlot(adjustedHeldSlot) && ItemIds[adjustedHeldSlot] == previousHeldItemId)
+            SetHeldSlotState(adjustedHeldSlot);
+        else
+            SetHeldSlotState(FindFirstSlotWithItem(previousHeldItemId));
     }
 
     private void NotifyInventoryChanged()
@@ -429,6 +503,7 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
         unchecked
         {
             int hash = HeldItemId;
+            hash = (hash * 397) ^ HeldSlotIndex;
             for (int i = 0; i < MaxSlots; i++)
             {
                 hash = (hash * 397) ^ ItemIds[i];
@@ -441,122 +516,131 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
 
     private void RefreshHeldVisual(bool force)
     {
-        if (!force && visibleHeldItemId == HeldItemId)
+        ResolveSupportComponents();
+        heldItemPresentation?.Refresh(HeldItemId, IsHeldSlotLocallySuppressed(), IsLocalPlayer, force);
+    }
+
+    private Vector3 ResolveDropPosition()
+    {
+        Transform ownerTransform = Owner.transform;
+        Vector3 desiredPosition = ownerTransform.position + ownerTransform.forward * dropForwardOffset + Vector3.up * dropUpOffset;
+        Vector3 probeOrigin = desiredPosition + Vector3.up * Mathf.Max(0f, dropGroundProbeHeight);
+        float probeDistance = Mathf.Max(0.1f, dropGroundProbeHeight + dropGroundProbeDistance);
+
+        if (Physics.Raycast(probeOrigin, Vector3.down, out RaycastHit hit, probeDistance, dropGroundMask, QueryTriggerInteraction.Ignore))
+            return hit.point + Vector3.up * 0.05f;
+
+        return desiredPosition;
+    }
+
+    private void SetPendingDrop(int slotIndex)
+    {
+        pendingDropSlotIndex = slotIndex;
+        pendingDropItemId = IsOccupiedSlot(slotIndex) ? ItemIds[slotIndex] : 0;
+        pendingDropStartedAt = Time.unscaledTime;
+    }
+
+    internal void MaintainPendingDropState()
+    {
+        if (!IsDropRequestPending())
             return;
 
-        visibleHeldItemId = HeldItemId;
-
-        if (heldVisualInstance != null)
+        if (!IsOccupiedSlot(pendingDropSlotIndex) || ItemIds[pendingDropSlotIndex] != pendingDropItemId)
         {
-            Destroy(heldVisualInstance);
-            heldVisualInstance = null;
+            ClearPendingDrop();
+            return;
         }
 
-        if (HeldItemId == 0 || !InventoryItemRegistry.TryGet(HeldItemId, out PlayerItemSO item))
+        if (Time.unscaledTime - pendingDropStartedAt > Mathf.Max(0.1f, dropRequestTimeout))
+            ClearPendingDrop();
+    }
+
+    internal bool IsDropRequestPending()
+    {
+        return pendingDropSlotIndex >= 0 && pendingDropItemId != 0;
+    }
+
+    private bool IsHeldSlotLocallySuppressed()
+    {
+        return IsDropRequestPending()
+            && pendingDropSlotIndex == HeldSlotIndex
+            && pendingDropItemId == HeldItemId;
+    }
+
+    private void ClearPendingDrop()
+    {
+        pendingDropSlotIndex = -1;
+        pendingDropItemId = 0;
+        pendingDropStartedAt = 0f;
+    }
+
+    private int ResolveSlotIndexForItem(int itemId)
+    {
+        if (itemId == 0)
+            return -1;
+
+        if (IsOccupiedSlot(HeldSlotIndex) && ItemIds[HeldSlotIndex] == itemId)
+            return HeldSlotIndex;
+
+        return FindFirstSlotWithItem(itemId);
+    }
+
+    private int FindFirstOccupiedSlot()
+    {
+        for (int i = 0; i < MaxSlots; i++)
+        {
+            if (IsOccupiedSlot(i))
+                return i;
+        }
+
+        return -1;
+    }
+
+    private int FindFirstSlotWithItem(int itemId)
+    {
+        if (itemId == 0)
+            return -1;
+
+        for (int i = 0; i < MaxSlots; i++)
+        {
+            if (IsOccupiedSlot(i) && ItemIds[i] == itemId)
+                return i;
+        }
+
+        return -1;
+    }
+
+    private bool IsOccupiedSlot(int slotIndex)
+    {
+        return slotIndex >= 0 && slotIndex < MaxSlots && ItemIds[slotIndex] != 0 && ItemCounts[slotIndex] > 0;
+    }
+
+    private void SetHeldSlotState(int slotIndex)
+    {
+        if (!IsOccupiedSlot(slotIndex))
+        {
+            HeldSlotIndex = -1;
+            HeldItemId = 0;
+            ClearPendingDrop();
             return;
+        }
 
-        GameObject prefab = item.HeldVisualPrefab != null ? item.HeldVisualPrefab : item.ItemPrefab;
-        if (prefab == null)
-            return;
-
-        ResolveRightHandAnchor();
-        Transform anchor = rightHandAnchor != null ? rightHandAnchor : transform;
-        if (IsLocalPlayer)
-            anchor = ResolveFirstPersonHeldAnchor();
-
-        heldVisualInstance = Instantiate(prefab, anchor);
-        heldVisualInstance.name = prefab.name + "_HeldVisual";
-        ApplyHeldVisualLocalPose(item);
-        heldVisualInstance.transform.localScale = Vector3.one;
-        StripHeldVisualGameplay(heldVisualInstance);
+        HeldSlotIndex = slotIndex;
+        HeldItemId = ItemIds[slotIndex];
     }
 
     private void TickHeldVisualPresentation()
     {
-        if (heldVisualInstance == null || HeldItemId == 0 || !InventoryItemRegistry.TryGet(HeldItemId, out PlayerItemSO item))
-            return;
-
-        ApplyHeldVisualLocalPose(item);
-    }
-
-    private void ApplyHeldVisualLocalPose(PlayerItemSO item)
-    {
-        if (heldVisualInstance == null)
-            return;
-
-        Vector3 itemOffset = item != null ? item.LocalPosition : Vector3.zero;
-        Vector3 basePosition = IsLocalPlayer ? firstPersonHeldLocalPosition : thirdPersonHeldLocalPosition;
-        Vector3 baseEuler = IsLocalPlayer ? firstPersonHeldLocalEuler : thirdPersonHeldLocalEuler;
-
-        heldVisualInstance.transform.localPosition = basePosition + itemOffset;
-        heldVisualInstance.transform.localRotation = Quaternion.Euler(baseEuler);
-    }
-
-    private Transform ResolveFirstPersonHeldAnchor()
-    {
-        Camera camera = Camera.main;
-        if (camera != null)
-            return camera.transform;
-
-        Camera ownerCamera = Owner != null ? Owner.GetComponentInChildren<Camera>(true) : null;
-        return ownerCamera != null ? ownerCamera.transform : transform;
-    }
-
-    private void StripHeldVisualGameplay(GameObject visual)
-    {
-        NetworkObject networkObject = visual.GetComponent<NetworkObject>();
-        if (networkObject != null)
-            networkObject.enabled = false;
-
-        foreach (Collider itemCollider in visual.GetComponentsInChildren<Collider>(true))
-            itemCollider.enabled = false;
-
-        foreach (NetworkBehaviour networkBehaviour in visual.GetComponentsInChildren<NetworkBehaviour>(true))
-            networkBehaviour.enabled = false;
-
-        foreach (MonoBehaviour behaviour in visual.GetComponentsInChildren<MonoBehaviour>(true))
-            behaviour.enabled = false;
-    }
-
-    private void ResolveRightHandAnchor()
-    {
-        if (hidingComponent == null)
-            hidingComponent = GetComponent<NetworkPlayerHidingComponent>() ?? GetComponentInParent<NetworkPlayerHidingComponent>();
-
-        if (rightHandAnchor != null)
-            return;
-
-        Transform visual = FindChildByName(transform, "RightHand") ??
-                           FindChildByName(transform, "Right Hand") ??
-                           FindChildByName(transform, "Hand_R") ??
-                           FindChildByName(transform, "mixamorig:RightHand");
-
-        rightHandAnchor = visual != null ? visual : transform;
-    }
-
-    private static Transform FindChildByName(Transform root, string childName)
-    {
-        if (root == null)
-            return null;
-
-        if (root.name == childName)
-            return root;
-
-        for (int i = 0; i < root.childCount; i++)
-        {
-            Transform found = FindChildByName(root.GetChild(i), childName);
-            if (found != null)
-                return found;
-        }
-
-        return null;
+        heldItemPresentation?.TickPose(HeldItemId, IsLocalPlayer);
     }
 
     public void ForceStoreHeldItemForHiding()
     {
+        StoreHeldSlotForHiding();
+
         if (Object == null || Object.HasStateAuthority)
         {
-            HeldItemId = 0;
+            SetHeldSlotState(-1);
             NotifyInventoryChanged();
             return;
         }
@@ -568,15 +652,93 @@ public class NetworkInventory : NetworkBehaviour, INetworkEntityComponent
     [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
     private void RPC_RequestStoreHeldItemForHiding()
     {
-        HeldItemId = 0;
+        StoreHeldSlotForHiding();
+        SetHeldSlotState(-1);
         NotifyInventoryChanged();
     }
 
-    private bool CanUseInventoryItems()
+    public void RestoreHeldItemAfterHiding()
+    {
+        int restoreSlot = ResolveStoredHeldSlot();
+        heldSlotStoredForHiding = false;
+        heldSlotBeforeHiding = -1;
+
+        if (restoreSlot < 0)
+            return;
+
+        if (Object == null || Object.HasStateAuthority)
+        {
+            SetHeldSlotState(restoreSlot);
+            NotifyInventoryChanged();
+            return;
+        }
+
+        if (Object.HasInputAuthority)
+            RPC_RequestRestoreHeldItemAfterHiding(restoreSlot);
+    }
+
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+    private void RPC_RequestRestoreHeldItemAfterHiding(int slotIndex)
+    {
+        if (!IsOccupiedSlot(slotIndex))
+            return;
+
+        SetHeldSlotState(slotIndex);
+        NotifyInventoryChanged();
+    }
+
+    internal bool CanUseInventoryItems()
     {
         if (hidingComponent == null)
-            hidingComponent = GetComponent<NetworkPlayerHidingComponent>() ?? GetComponentInParent<NetworkPlayerHidingComponent>();
+            hidingComponent = Owner.GetComponentInChildren<NetworkPlayerHidingComponent>(true);
 
         return hidingComponent == null || hidingComponent.CanUseItems;
+    }
+
+    private void ResolveSupportComponents()
+    {
+        GameObject entityOwner = Owner;
+
+        if (hidingComponent == null)
+            hidingComponent = entityOwner.GetComponentInChildren<NetworkPlayerHidingComponent>(true);
+
+        if (heldItemPresentation == null)
+            heldItemPresentation = entityOwner.GetComponentInChildren<InventoryHeldItemPresentation>(true);
+
+        if (heldItemPresentation == null)
+            heldItemPresentation = gameObject.AddComponent<InventoryHeldItemPresentation>();
+
+        heldItemPresentation.Initialize(
+            entityOwner,
+            rightHandAnchor,
+            firstPersonHeldLocalPosition,
+            firstPersonHeldLocalEuler,
+            thirdPersonHeldLocalPosition,
+            thirdPersonHeldLocalEuler);
+
+        if (input == null)
+            input = entityOwner.GetComponentInChildren<PlayerInventoryInput>(true);
+
+        if (input == null)
+            input = gameObject.AddComponent<PlayerInventoryInput>();
+
+        input.Initialize(this, dropKey);
+    }
+
+    private void StoreHeldSlotForHiding()
+    {
+        if (heldSlotStoredForHiding)
+            return;
+
+        heldSlotBeforeHiding = HeldSlotIndex;
+        heldSlotStoredForHiding = true;
+    }
+
+    private int ResolveStoredHeldSlot()
+    {
+        if (heldSlotStoredForHiding && IsOccupiedSlot(heldSlotBeforeHiding))
+            return heldSlotBeforeHiding;
+
+        return FindFirstOccupiedSlot();
     }
 }

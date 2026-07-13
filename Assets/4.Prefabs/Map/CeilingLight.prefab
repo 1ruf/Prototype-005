@@ -50,6 +50,7 @@ MonoBehaviour:
   enableMat: {fileID: 2100000, guid: f134abf3f8861984cb2079191b4614c5, type: 2}
   disableMat: {fileID: 2100000, guid: 8b748c60a82348a4ea7172e93ed8ca5f, type: 2}
   mainLight: {fileID: 4010442171121910501}
+  renderer: {fileID: 8244836751677109869}
 --- !u!1 &4942086435522279452
 GameObject:
   m_ObjectHideFlags: 0

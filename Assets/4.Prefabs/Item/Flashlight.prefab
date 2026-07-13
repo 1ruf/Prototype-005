@@ -183,11 +183,12 @@ MonoBehaviour:
   beamObject: {fileID: 6613574690129151782}
   firstPersonSpotAngle: 64
   thirdPersonSpotAngle: 72
-  runSwayPitch: 6
+  runSwayPitch: 2
   runSwayYaw: 0
   runSwayRoll: 0
-  runSwayFrequency: 6
-  walkSwayMultiplier: 0.45
+  runSwayFrequency: 4
+  walkSwayMultiplier: 0.25
+  swayRotationSmoothSpeed: 16
   thirdPersonLookPitchMultiplier: 0
 --- !u!136 &2376807879390504767
 CapsuleCollider:

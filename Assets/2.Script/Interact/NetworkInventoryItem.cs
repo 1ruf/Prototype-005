@@ -137,6 +137,18 @@ public class NetworkInventoryItem : NetworkBehaviour, IInteractable, IPlayerInte
         return true;
     }
 
+    public void ResetDroppedState()
+    {
+        if (Object != null && Object.IsValid && !Object.HasStateAuthority)
+            return;
+
+        IsCollected = false;
+        ApplyCollectedState(false);
+
+        if (Object != null && Object.IsValid)
+            RPC_ApplyCollectedState(false);
+    }
+
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     private void RPC_ApplyCollectedState(NetworkBool collected)
     {

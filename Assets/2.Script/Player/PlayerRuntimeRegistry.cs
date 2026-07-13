@@ -1,20 +1,25 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 public static class PlayerRuntimeRegistry
 {
-    private static readonly List<PlayerMovement> players = new List<PlayerMovement>(8);
+    private static readonly RuntimeEntityRegistry<PlayerMovement> registry = new(8);
 
-    public static IReadOnlyList<PlayerMovement> Players => players;
+    public static IReadOnlyList<PlayerMovement> Players => registry.Items;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void Reset()
+    {
+        registry.Clear();
+    }
 
     public static void Register(PlayerMovement player)
     {
-        if (player != null && !players.Contains(player))
-            players.Add(player);
+        registry.Register(player);
     }
 
     public static void Unregister(PlayerMovement player)
     {
-        if (player != null)
-            players.Remove(player);
+        registry.Unregister(player);
     }
 }

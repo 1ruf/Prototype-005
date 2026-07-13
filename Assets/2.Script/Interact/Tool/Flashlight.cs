@@ -6,15 +6,17 @@ public class Flashlight : PlayerEquipment
     [SerializeField] private GameObject beamObject;
     [SerializeField] private float firstPersonSpotAngle = 64f;
     [SerializeField] private float thirdPersonSpotAngle = 72f;
-    [SerializeField] private float runSwayPitch = 6f;
+    [SerializeField] private float runSwayPitch = 2f;
     [SerializeField] private float runSwayYaw = 0f;
     [SerializeField] private float runSwayRoll = 0f;
-    [SerializeField] private float runSwayFrequency = 6f;
-    [SerializeField] private float walkSwayMultiplier = 0.45f;
+    [SerializeField] private float runSwayFrequency = 4f;
+    [SerializeField] private float walkSwayMultiplier = 0.25f;
+    [SerializeField] private float swayRotationSmoothSpeed = 16f;
     [SerializeField] private float thirdPersonLookPitchMultiplier = 0f;
 
     private float swayTime;
     private bool isFirstPersonView;
+    private Quaternion currentPresentationRotation = Quaternion.identity;
 
     protected override void Awake()
     {
@@ -46,12 +48,17 @@ public class Flashlight : PlayerEquipment
         }
 
         Quaternion lookRotation = isFirstPersonView ? Quaternion.identity : Quaternion.Euler(lookPitch * thirdPersonLookPitchMultiplier, 0f, 0f);
-        ItemRoot.localRotation = (isFirstPersonView ? FirstPersonRotation : ThirdPersonRotation) * lookRotation * Quaternion.Euler(swayEuler);
+        Quaternion targetRotation = (isFirstPersonView ? FirstPersonRotation : ThirdPersonRotation) * lookRotation * Quaternion.Euler(swayEuler);
+        float follow = 1f - Mathf.Exp(-swayRotationSmoothSpeed * deltaTime);
+        currentPresentationRotation = Quaternion.Slerp(currentPresentationRotation, targetRotation, follow);
+        ItemRoot.localRotation = currentPresentationRotation;
     }
 
     protected override void OnPerspectiveChanged(bool isFirstPerson)
     {
         isFirstPersonView = isFirstPerson;
+        currentPresentationRotation = isFirstPersonView ? FirstPersonRotation : ThirdPersonRotation;
+        ItemRoot.localRotation = currentPresentationRotation;
         ApplyLightProfile();
     }
 

@@ -30,7 +30,7 @@ public class CameraBobbingController : MonoBehaviour
 
         Vector2 move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
         bool moving = move.sqrMagnitude > 0.01f;
-        bool running = Input.GetKey(KeyCode.LeftShift);
+        bool running = playerMovement != null ? playerMovement.IsSprintActive : Input.GetKey(KeyCode.LeftShift);
 
         if (moving)
         {

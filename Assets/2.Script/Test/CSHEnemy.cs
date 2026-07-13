@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using Fusion;
 using UnityEngine;
 using UnityEngine.AI;
@@ -24,77 +22,64 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         void Exit();
     }
 
-    private readonly struct NavigationPoint
-    {
-        public readonly Vector3 Position;
-        public readonly bool IsValid;
-
-        public NavigationPoint(Vector3 position)
-        {
-            Position = position;
-            IsValid = true;
-        }
-    }
-
+    // Legacy serialized configuration remains on the coordinator so existing prefab data migrates losslessly.
     [SerializeField] private Transform target;
     [SerializeField] private Transform visual;
     [SerializeField] private EnemyAnimationDriver animationDriver;
-    [SerializeField] private GameObject ui;
-    [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float patrolSpeed = 2.2f;
-    [SerializeField] private float rotationSpeed = 3f;
-    [SerializeField] private float detectionRange = 12f;
-    [SerializeField] private float proximityDetectionRange = 4f;
-    [SerializeField] private float loseRange = 18f;
-    [SerializeField] private float viewAngle = 360f;
-    [SerializeField] private float loseSightDelay = 5f;
-    [SerializeField] private LayerMask lineOfSightMask = ~0;
-    [SerializeField] private float eyeHeight = 1.5f;
-    [SerializeField] private float patrolRadius = 8f;
-    [SerializeField] private float patrolPointReachedDistance = 0.6f;
-    [SerializeField] private float idleAtPatrolPointTime = 1.2f;
-    [SerializeField] private float investigateDuration = 4f;
-    [SerializeField] private float investigateRadius = 3f;
-    [SerializeField] private LayerMask patrolWallMask = ~0;
-    [SerializeField] private Vector2 wallPatrolDistanceRange = new Vector2(28f, 55f);
-    [SerializeField, Range(0f, 1f)] private float patrolWallInfluence = 0.25f;
-    [SerializeField] private Vector2 patrolWanderYawRange = new Vector2(-10f, 10f);
-    [SerializeField] private Vector2 patrolSegmentYawRange = new Vector2(-12f, 12f);
-    [SerializeField] private Vector2 patrolReverseYawRange = new Vector2(145f, 215f);
-    [SerializeField, Range(0f, 1f)] private float patrolRandomReverseChance = 0.01f;
-    [SerializeField] private float wallFollowProbeDistance = 3.5f;
-    [SerializeField] private float wallFollowClearance = 1.05f;
-    [SerializeField] private float wallFollowStepDistance = 3.2f;
-    [SerializeField] private float wallFollowForwardBlockDistance = 1.35f;
-    [SerializeField] private float wallFollowDestinationRefreshDistance = 0.9f;
-    [SerializeField] private float enemySeparationRadius = 2.25f;
-    [SerializeField] private float enemySeparationStrength = 5.5f;
-    [SerializeField] private float enemySeparationMaxForce = 3.5f;
-    [SerializeField] private float navMeshSnapDistance = 8f;
-    [SerializeField] private float chaseNavMeshSampleDistance = 1.2f;
-    [SerializeField] private float chaseTargetNavMeshSampleDistance = 2f;
-    [SerializeField] private float chaseMaxNavPointJumpDistance = 4f;
-    [SerializeField] private float chaseTargetBackoffDistance = 3f;
-    [SerializeField] private float chaseTargetBackoffStep = 0.35f;
-    [SerializeField] private float chaseDirectFallbackDistance = 6f;
-    [SerializeField] private bool preferUnclaimedChaseTargets = true;
-    [SerializeField] private float targetClaimSwitchDistance = 1.5f;
-    [SerializeField] private float attackDamage = 100f;
-    [SerializeField] private float attackAnimationDuration = 0.8f;
-    [SerializeField] private float killAnimationDuration = 10f;
-    [SerializeField] private float killKnockbackUpwardForce = 3f;
-    [SerializeField] private LayerMask chaseDoorBreakMask = ~0;
-    [SerializeField] private float chaseDoorBreakDistance = 1.8f;
-    [SerializeField] private float chaseDoorBreakRadius = 0.65f;
-    [SerializeField] private float chaseDoorBreakHeight = 1.1f;
-    [SerializeField] private float chaseDoorBreakCooldown = 0.5f;
+    [SerializeField, HideInInspector] private GameObject ui;
+    [SerializeField, HideInInspector] private float moveSpeed = 5f;
+    [SerializeField, HideInInspector] private float patrolSpeed = 2.2f;
+    [SerializeField, HideInInspector] private float rotationSpeed = 3f;
+    [SerializeField, HideInInspector] private float detectionRange = 12f;
+    [SerializeField, HideInInspector] private float proximityDetectionRange = 4f;
+    [SerializeField, HideInInspector] private float loseRange = 18f;
+    [SerializeField, HideInInspector] private float viewAngle = 360f;
+    [SerializeField, HideInInspector] private float loseSightDelay = 5f;
+    [SerializeField, HideInInspector] private LayerMask lineOfSightMask = ~0;
+    [SerializeField, HideInInspector] private float eyeHeight = 1.5f;
+    [SerializeField, HideInInspector] private float patrolRadius = 8f;
+    [SerializeField, HideInInspector] private float patrolPointReachedDistance = 0.6f;
+    [SerializeField, HideInInspector] private float idleAtPatrolPointTime = 1.2f;
+    [SerializeField, HideInInspector] private float investigateDuration = 4f;
+    [SerializeField, HideInInspector] private float investigateRadius = 3f;
+    [SerializeField, HideInInspector] private LayerMask patrolWallMask = ~0;
+    [SerializeField, HideInInspector] private Vector2 wallPatrolDistanceRange = new Vector2(28f, 55f);
+    [SerializeField, HideInInspector, Range(0f, 1f)] private float patrolWallInfluence = 0.25f;
+    [SerializeField, HideInInspector] private Vector2 patrolWanderYawRange = new Vector2(-10f, 10f);
+    [SerializeField, HideInInspector] private Vector2 patrolSegmentYawRange = new Vector2(-12f, 12f);
+    [SerializeField, HideInInspector] private Vector2 patrolReverseYawRange = new Vector2(145f, 215f);
+    [SerializeField, HideInInspector, Range(0f, 1f)] private float patrolRandomReverseChance = 0.01f;
+    [SerializeField, HideInInspector] private float wallFollowProbeDistance = 3.5f;
+    [SerializeField, HideInInspector] private float wallFollowClearance = 1.05f;
+    [SerializeField, HideInInspector] private float wallFollowStepDistance = 3.2f;
+    [SerializeField, HideInInspector] private float wallFollowForwardBlockDistance = 1.35f;
+    [SerializeField, HideInInspector] private float wallFollowDestinationRefreshDistance = 0.9f;
+    [SerializeField, HideInInspector] private float enemySeparationRadius = 2.25f;
+    [SerializeField, HideInInspector] private float enemySeparationStrength = 5.5f;
+    [SerializeField, HideInInspector] private float enemySeparationMaxForce = 3.5f;
+    [SerializeField, HideInInspector] private float navMeshSnapDistance = 8f;
+    [SerializeField, HideInInspector] private float chaseNavMeshSampleDistance = 1.2f;
+    [SerializeField, HideInInspector] private float chaseTargetNavMeshSampleDistance = 2f;
+    [SerializeField, HideInInspector] private float chaseMaxNavPointJumpDistance = 4f;
+    [SerializeField, HideInInspector] private float chaseTargetBackoffDistance = 3f;
+    [SerializeField, HideInInspector] private float chaseTargetBackoffStep = 0.35f;
+    [SerializeField, HideInInspector] private float chaseDirectFallbackDistance = 6f;
+    [SerializeField, HideInInspector] private bool preferUnclaimedChaseTargets = true;
+    [SerializeField, HideInInspector] private float targetClaimSwitchDistance = 1.5f;
+    [SerializeField, HideInInspector] private float attackDamage = 100f;
+    [SerializeField, HideInInspector] private float attackAnimationDuration = 0.8f;
+    [SerializeField, HideInInspector] private float killAnimationDuration = 10f;
+    [SerializeField, HideInInspector] private float killKnockbackUpwardForce = 3f;
+    [SerializeField, HideInInspector] private LayerMask chaseDoorBreakMask = ~0;
+    [SerializeField, HideInInspector] private float chaseDoorBreakDistance = 1.8f;
+    [SerializeField, HideInInspector] private float chaseDoorBreakRadius = 0.65f;
+    [SerializeField, HideInInspector] private float chaseDoorBreakHeight = 1.1f;
+    [SerializeField, HideInInspector] private float chaseDoorBreakCooldown = 0.5f;
 
-    private Rigidbody rb;
-    private NavMeshAgent agent;
-    private Vector3 moveDirection;
-    private bool hasKilledLocalPlayer;
-    private Vector3 spawnPosition;
-    private float lostSightTimer;
+    [SerializeField] private EnemyPerceptionComponent perceptionComponent;
+    [SerializeField] private EnemyNavigationComponent navigationComponent;
+    [SerializeField] private EnemyCombatComponent combatComponent;
+
     private float idleTimer;
     private IEnemyState currentState;
     private IEnemyState idleState;
@@ -106,16 +91,8 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
     private bool networkSpawned;
     private int renderedAttackSequence;
     private int renderedKillSequence;
-    private IKnockbackable pendingKillKnockback;
-    private RagdollEntityComponent pendingKillRagdoll;
-    private Vector3 pendingKillKnockbackDirection;
-    private float localKillAnimationEndTime;
-    private float nextAllowedDoorBreakTime;
-    private bool useDirectChaseMovement;
-    private NavigationPoint chasePoint;
-    private Vector3 lastObservedTargetPosition;
     private GameObject owner;
-    private readonly HashSet<RagdollEntityComponent> killAnimatedRagdolls = new HashSet<RagdollEntityComponent>();
+    private bool servicesConfigured;
 
     [Networked] private Vector3 NetworkPosition { get; set; }
     [Networked] private Quaternion NetworkRotation { get; set; }
@@ -128,6 +105,11 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
     public int RealtimeEnemyId { get; private set; }
     public GameObject Owner => owner != null ? owner : gameObject;
+
+    internal bool HasActiveStateForServices => currentState != null;
+    internal bool HasStateAuthorityForServices => Object == null || Object.HasStateAuthority;
+    internal int TargetClaimOrderForServices => RealtimeEnemyId != 0 ? RealtimeEnemyId : GetInstanceID();
+    internal float LoseRangeForServices => perceptionComponent != null ? perceptionComponent.LoseRange : loseRange;
 
     public bool IsChasingTarget(PlayerMovement player)
     {
@@ -142,24 +124,11 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             return false;
 
         if (target == null)
-            return Object != null && networkSpawned;
-
-        return target == player.transform || target.IsChildOf(player.transform) || target.GetComponentInParent<PlayerMovement>() == player;
-    }
-
-    private bool IsChasingTransform(Transform candidate)
-    {
-        if (candidate == null)
             return false;
 
-        bool isChasing = Object != null && networkSpawned
-            ? NetworkState == EnemyStateId.Chase
-            : currentState != null && currentState.Id == EnemyStateId.Chase;
-
-        if (!isChasing || target == null)
-            return false;
-
-        return target == candidate || target.IsChildOf(candidate) || candidate.IsChildOf(target);
+        return target == player.transform
+            || target.IsChildOf(player.transform)
+            || target.GetComponentInParent<PlayerMovement>() == player;
     }
 
     public void Initialize(GameObject entityOwner)
@@ -172,22 +141,17 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         RealtimeEnemyId = enemyId;
     }
 
+    public void ConfigureLegacyComponents()
+    {
+        servicesConfigured = false;
+        EnsureServiceComponents();
+    }
+
     private void Awake()
     {
         Initialize(gameObject);
-
-        if (ui != null)
-            ui.SetActive(false);
-
-        rb = GetComponent<Rigidbody>();
-        rb.freezeRotation = true;
-
-        agent = GetComponent<NavMeshAgent>();
-        if (agent == null)
-            agent = gameObject.AddComponent<NavMeshAgent>();
-
-        ConfigureAgent();
-        SnapToNavMesh();
+        EnsureServiceComponents();
+        navigationComponent.SnapToNavMesh();
         ResolveAnimationDriver();
         CreateStates();
     }
@@ -207,30 +171,27 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         if (Object != null && !Object.HasStateAuthority)
             return;
 
-        spawnPosition = transform.position;
+        navigationComponent.CaptureSpawnPosition();
         ChangeState(EnemyStateId.Patrol);
-        InitializeMoveDirection();
+        navigationComponent.InitializeMoveDirection(target);
     }
 
     public override void Spawned()
     {
         networkSpawned = true;
-        spawnPosition = transform.position;
-        ConfigureAgent();
-        SnapToNavMesh();
-        spawnPosition = transform.position;
-        rb.isKinematic = !Object.HasStateAuthority;
+        EnsureServiceComponents();
+        navigationComponent.CaptureSpawnPosition();
+        navigationComponent.ConfigureAgent();
+        navigationComponent.SnapToNavMesh();
+        navigationComponent.CaptureSpawnPosition();
+        navigationComponent.ApplyNetworkAuthority(Object.HasStateAuthority);
 
         if (Object.HasStateAuthority)
         {
             ChangeState(EnemyStateId.Patrol);
-            InitializeMoveDirection();
+            navigationComponent.InitializeMoveDirection(target);
             PublishNetworkPose();
-            return;
         }
-
-        if (agent != null)
-            agent.enabled = false;
     }
 
     public override void Despawned(NetworkRunner runner, bool hasState)
@@ -261,9 +222,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         if (Object == null || Object.HasStateAuthority)
             return;
 
-        if (agent != null && agent.enabled)
-            agent.enabled = false;
-
+        navigationComponent.ApplyNetworkAuthority(false);
         transform.position = Vector3.Lerp(transform.position, NetworkPosition, Time.deltaTime * 12f);
 
         if (visual != null)
@@ -271,18 +230,261 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         else
             transform.rotation = Quaternion.Slerp(transform.rotation, NetworkRotation, Time.deltaTime * 12f);
 
-        bool replayAttack = NetworkAnimationState == EnemyAnimationState.Attack && renderedAttackSequence != NetworkAttackSequence;
-        bool replayKill = NetworkAnimationState == EnemyAnimationState.Kill && renderedKillSequence != NetworkKillSequence;
+        bool replayAttack = NetworkAnimationState == EnemyAnimationState.Attack
+            && renderedAttackSequence != NetworkAttackSequence;
+        bool replayKill = NetworkAnimationState == EnemyAnimationState.Kill
+            && renderedKillSequence != NetworkKillSequence;
         ApplyAnimationState(NetworkAnimationState, replayAttack || replayKill);
         renderedAttackSequence = NetworkAttackSequence;
         renderedKillSequence = NetworkKillSequence;
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        EnsureServiceComponents();
+        combatComponent.HandleCollision(collision);
+    }
+
+    public void AnimationEvent_ApplyKillKnockback(float force)
+    {
+        EnsureServiceComponents();
+        combatComponent.ApplyKillKnockback(force);
+    }
+
+    public bool CanCurrentlySee(PlayerMovement player)
+    {
+        EnsureServiceComponents();
+        return perceptionComponent.CanCurrentlySee(player);
+    }
+
+    public bool TryKillPlayer(PlayerMovement player)
+    {
+        EnsureServiceComponents();
+        return combatComponent.TryKillPlayer(player);
+    }
+
+    public static bool TryKillIfAnyEnemyCanSee(PlayerMovement player)
+    {
+        if (player == null)
+            return false;
+
+        foreach (CSHEnemy enemy in EnemyRuntimeRegistry.Enemies)
+        {
+            if (enemy == null || !enemy.isActiveAndEnabled)
+                continue;
+
+            if (enemy.Object != null && !enemy.Object.HasStateAuthority)
+                continue;
+
+            if (!enemy.CanCurrentlySee(player))
+                continue;
+
+            return enemy.TryKillPlayer(player);
+        }
+
+        return false;
+    }
+
+    public static bool HasEnemyDetectedPlayer(PlayerMovement player)
+    {
+        if (player == null)
+            return false;
+
+        foreach (CSHEnemy enemy in EnemyRuntimeRegistry.Enemies)
+        {
+            if (enemy == null || !enemy.isActiveAndEnabled)
+                continue;
+
+            if (enemy.Object != null && !enemy.Object.HasStateAuthority)
+                continue;
+
+            if (enemy.CanCurrentlySee(player))
+                return true;
+        }
+
+        return false;
+    }
+
+    internal bool IsChasingTransformForServices(Transform candidate)
+    {
+        if (candidate == null)
+            return false;
+
+        bool isChasing = Object != null && networkSpawned
+            ? NetworkState == EnemyStateId.Chase
+            : currentState != null && currentState.Id == EnemyStateId.Chase;
+
+        if (!isChasing || target == null)
+            return false;
+
+        return target == candidate || target.IsChildOf(candidate) || candidate.IsChildOf(target);
+    }
+
+    internal bool CanSeeForServices(Transform candidate, float maxDistance)
+    {
+        EnsureServiceComponents();
+        return perceptionComponent.CanSee(candidate, maxDistance);
+    }
+
+    internal void RefreshChasePointFromPerception()
+    {
+        navigationComponent?.RefreshChasePoint(target);
+    }
+
+    internal void StopNavigationFromCombat()
+    {
+        navigationComponent?.StopMoving();
+    }
+
+    internal float GetAnimationClipLengthForServices(EnemyAnimationState state, float fallback)
+    {
+        if (animationDriver == null)
+            ResolveAnimationDriver();
+
+        return animationDriver != null ? animationDriver.GetClipLength(state, fallback) : fallback;
+    }
+
+    internal void PublishNetworkRotationFromServices(Quaternion rotation)
+    {
+        if (Object != null && networkSpawned)
+            NetworkRotation = rotation;
+    }
+
+    internal void BeginAttackAnimationFromCombat(float duration)
+    {
+        if (Object != null && !Object.HasStateAuthority)
+            return;
+
+        if (Object != null && networkSpawned)
+        {
+            AttackAnimationTimer = TickTimer.CreateFromSeconds(Runner, duration);
+            NetworkAttackSequence++;
+            NetworkAnimationState = EnemyAnimationState.Attack;
+            renderedAttackSequence = NetworkAttackSequence;
+        }
+
+        ApplyAnimationState(EnemyAnimationState.Attack, true);
+    }
+
+    internal void BeginKillAnimationFromCombat(float duration)
+    {
+        if (Object != null && !Object.HasStateAuthority)
+            return;
+
+        if (Object != null && networkSpawned)
+        {
+            KillAnimationTimer = TickTimer.CreateFromSeconds(Runner, duration);
+            AttackAnimationTimer = TickTimer.None;
+            NetworkKillSequence++;
+            NetworkAnimationState = EnemyAnimationState.Kill;
+            renderedKillSequence = NetworkKillSequence;
+        }
+
+        ApplyAnimationState(EnemyAnimationState.Kill, true);
+    }
+
+    private void EnsureServiceComponents()
+    {
+        bool referencesChanged = false;
+
+        if (perceptionComponent == null)
+        {
+            perceptionComponent = GetComponentInChildren<EnemyPerceptionComponent>(true);
+            referencesChanged = true;
+        }
+        if (perceptionComponent == null)
+            perceptionComponent = gameObject.AddComponent<EnemyPerceptionComponent>();
+
+        if (navigationComponent == null)
+        {
+            navigationComponent = GetComponentInChildren<EnemyNavigationComponent>(true);
+            referencesChanged = true;
+        }
+        if (navigationComponent == null)
+            navigationComponent = gameObject.AddComponent<EnemyNavigationComponent>();
+
+        if (combatComponent == null)
+        {
+            combatComponent = GetComponentInChildren<EnemyCombatComponent>(true);
+            referencesChanged = true;
+        }
+        if (combatComponent == null)
+            combatComponent = gameObject.AddComponent<EnemyCombatComponent>();
+
+        if (servicesConfigured && !referencesChanged)
+            return;
+
+        perceptionComponent.ConfigureLegacy(this, visual, new EnemyPerceptionComponent.LegacySettings
+        {
+            DetectionRange = detectionRange,
+            ProximityDetectionRange = proximityDetectionRange,
+            LoseRange = loseRange,
+            ViewAngle = viewAngle,
+            LoseSightDelay = loseSightDelay,
+            LineOfSightMask = lineOfSightMask,
+            EyeHeight = eyeHeight,
+            PreferUnclaimedChaseTargets = preferUnclaimedChaseTargets,
+            TargetClaimSwitchDistance = targetClaimSwitchDistance
+        });
+
+        navigationComponent.ConfigureLegacy(this, visual, new EnemyNavigationComponent.LegacySettings
+        {
+            MoveSpeed = moveSpeed,
+            RotationSpeed = rotationSpeed,
+            PatrolSpeed = patrolSpeed,
+            IdleAtPatrolPointTime = idleAtPatrolPointTime,
+            InvestigateDuration = investigateDuration,
+            InvestigateRadius = investigateRadius,
+            PatrolRadius = patrolRadius,
+            PatrolPointReachedDistance = patrolPointReachedDistance,
+            PatrolWallMask = patrolWallMask,
+            WallPatrolDistanceRange = wallPatrolDistanceRange,
+            PatrolWallInfluence = patrolWallInfluence,
+            PatrolWanderYawRange = patrolWanderYawRange,
+            PatrolSegmentYawRange = patrolSegmentYawRange,
+            PatrolReverseYawRange = patrolReverseYawRange,
+            PatrolRandomReverseChance = patrolRandomReverseChance,
+            WallFollowProbeDistance = wallFollowProbeDistance,
+            WallFollowClearance = wallFollowClearance,
+            WallFollowStepDistance = wallFollowStepDistance,
+            WallFollowForwardBlockDistance = wallFollowForwardBlockDistance,
+            WallFollowDestinationRefreshDistance = wallFollowDestinationRefreshDistance,
+            EnemySeparationRadius = enemySeparationRadius,
+            EnemySeparationStrength = enemySeparationStrength,
+            EnemySeparationMaxForce = enemySeparationMaxForce,
+            NavMeshSnapDistance = navMeshSnapDistance,
+            ChaseNavMeshSampleDistance = chaseNavMeshSampleDistance,
+            ChaseTargetNavMeshSampleDistance = chaseTargetNavMeshSampleDistance,
+            ChaseMaxNavPointJumpDistance = chaseMaxNavPointJumpDistance,
+            ChaseTargetBackoffDistance = chaseTargetBackoffDistance,
+            ChaseTargetBackoffStep = chaseTargetBackoffStep,
+            ChaseDirectFallbackDistance = chaseDirectFallbackDistance,
+            EyeHeight = eyeHeight,
+            ChaseDoorBreakMask = chaseDoorBreakMask,
+            ChaseDoorBreakDistance = chaseDoorBreakDistance,
+            ChaseDoorBreakRadius = chaseDoorBreakRadius,
+            ChaseDoorBreakHeight = chaseDoorBreakHeight,
+            ChaseDoorBreakCooldown = chaseDoorBreakCooldown
+        });
+
+        combatComponent.ConfigureLegacy(this, visual, perceptionComponent, new EnemyCombatComponent.LegacySettings
+        {
+            DeathUi = ui,
+            AttackDamage = attackDamage,
+            AttackAnimationDuration = attackAnimationDuration,
+            KillAnimationDuration = killAnimationDuration,
+            KillKnockbackUpwardForce = killKnockbackUpwardForce,
+            ProximityDetectionRange = proximityDetectionRange
+        });
+
+        servicesConfigured = true;
     }
 
     private void TickState(float deltaTime)
     {
         if (IsKillAnimationPlaying())
         {
-            StopMoving();
+            navigationComponent.StopMoving();
             return;
         }
 
@@ -349,742 +551,15 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
     private void AcquireTarget(Transform newTarget)
     {
         target = newTarget;
-        lostSightTimer = 0f;
-        chasePoint = default;
-        lastObservedTargetPosition = newTarget != null ? newTarget.position : transform.position;
-        RefreshChasePointFromTarget();
-    }
-
-    private Vector3 GetLastKnownTargetNavigationPosition()
-    {
-        if (chasePoint.IsValid)
-            return chasePoint.Position;
-
-        return target != null ? target.position : lastObservedTargetPosition;
-    }
-
-    private void MoveTo(Vector3 destination, float speed)
-    {
-        if (agent != null && agent.enabled && agent.isOnNavMesh)
-        {
-            destination = ProjectDestinationToNavMesh(destination);
-            agent.nextPosition = transform.position;
-            agent.speed = speed;
-            agent.isStopped = false;
-            agent.SetDestination(destination);
-
-            Vector3 desiredVelocity = agent.desiredVelocity;
-            if (desiredVelocity.sqrMagnitude <= 0.001f && agent.hasPath && agent.path.corners.Length > 1)
-                desiredVelocity = (agent.path.corners[1] - transform.position).normalized * speed;
-
-            if (desiredVelocity.sqrMagnitude <= 0.001f)
-                desiredVelocity = ResolveImmediatePathVelocity(destination, speed);
-
-            desiredVelocity = ApplyEnemySeparation(desiredVelocity, speed);
-            desiredVelocity.y = rb.linearVelocity.y;
-            rb.linearVelocity = desiredVelocity.sqrMagnitude > 0.001f ? desiredVelocity : rb.linearVelocity;
-            return;
-        }
-
-        MoveDirectlyTo(destination, speed, Time.deltaTime);
-    }
-
-    private Vector3 ResolveImmediatePathVelocity(Vector3 destination, float speed)
-    {
-        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
-            return Vector3.zero;
-
-        NavMeshPath path = new NavMeshPath();
-        if (agent.CalculatePath(destination, path) && path.status != NavMeshPathStatus.PathInvalid && path.corners.Length > 1)
-        {
-            Vector3 nextCornerDirection = path.corners[1] - transform.position;
-            nextCornerDirection.y = 0f;
-            if (nextCornerDirection.sqrMagnitude > 0.001f)
-                return nextCornerDirection.normalized * speed;
-        }
-
-        Vector3 directDirection = destination - transform.position;
-        directDirection.y = 0f;
-        return directDirection.sqrMagnitude > 0.001f ? directDirection.normalized * speed : Vector3.zero;
-    }
-
-    private void StopMoving()
-    {
-        if (agent != null && agent.enabled && agent.isOnNavMesh)
-        {
-            agent.isStopped = true;
-            agent.ResetPath();
-            agent.nextPosition = transform.position;
-        }
-
-        rb.linearVelocity = Vector3.zero;
-    }
-
-    private bool HasReachedDestination()
-    {
-        if (agent != null && agent.enabled && agent.isOnNavMesh)
-            return !agent.pathPending && agent.remainingDistance <= patrolPointReachedDistance;
-
-        return rb.linearVelocity.sqrMagnitude <= 0.01f;
-    }
-
-    private void MoveDirectlyTo(Vector3 destination, float speed, float deltaTime)
-    {
-        Vector3 targetDirection = destination - transform.position;
-        targetDirection.y = 0f;
-
-        if (targetDirection.sqrMagnitude <= 0.0001f)
-        {
-            rb.linearVelocity = Vector3.zero;
-            return;
-        }
-
-        targetDirection.Normalize();
-        moveDirection = Vector3.Lerp(moveDirection, targetDirection, rotationSpeed * deltaTime).normalized;
-        Vector3 desiredVelocity = ApplyEnemySeparation(moveDirection * speed, speed);
-        rb.linearVelocity = desiredVelocity;
-        RotateToward(moveDirection);
-    }
-
-    private Vector3 ApplyEnemySeparation(Vector3 desiredVelocity, float speed)
-    {
-        Vector3 separation = GetEnemySeparationVelocity();
-        if (separation.sqrMagnitude <= 0.0001f)
-            return desiredVelocity;
-
-        Vector3 flatDesired = desiredVelocity;
-        flatDesired.y = 0f;
-
-        Vector3 adjustedVelocity = flatDesired + separation;
-        if (adjustedVelocity.sqrMagnitude > speed * speed)
-            adjustedVelocity = adjustedVelocity.normalized * speed;
-
-        adjustedVelocity.y = desiredVelocity.y;
-        return adjustedVelocity;
-    }
-
-    private Vector3 GetEnemySeparationVelocity()
-    {
-        if (enemySeparationRadius <= 0f || enemySeparationStrength <= 0f)
-            return Vector3.zero;
-
-        Vector3 separation = Vector3.zero;
-        Vector3 position = transform.position;
-        float radiusSqr = enemySeparationRadius * enemySeparationRadius;
-
-        foreach (CSHEnemy other in EnemyRuntimeRegistry.Enemies)
-        {
-            if (other == null || other == this)
-                continue;
-
-            if (other.currentState == null)
-                continue;
-
-            Vector3 away = position - other.transform.position;
-            away.y = 0f;
-            float distanceSqr = away.sqrMagnitude;
-            if (distanceSqr > radiusSqr)
-                continue;
-
-            if (distanceSqr <= 0.0001f)
-            {
-                away = visual != null ? visual.right : transform.right;
-                away.y = 0f;
-                distanceSqr = away.sqrMagnitude;
-            }
-
-            if (distanceSqr <= 0.0001f)
-                continue;
-
-            float distance = Mathf.Sqrt(distanceSqr);
-            float weight = 1f - Mathf.Clamp01(distance / enemySeparationRadius);
-            separation += away / distance * (weight * enemySeparationStrength);
-        }
-
-        float maxForce = Mathf.Max(0f, enemySeparationMaxForce);
-        if (maxForce > 0f && separation.sqrMagnitude > maxForce * maxForce)
-            separation = separation.normalized * maxForce;
-
-        return separation;
-    }
-
-    private void RotateTowardMovement()
-    {
-        Vector3 velocity = agent != null && agent.enabled ? agent.velocity : rb.linearVelocity;
-        velocity.y = 0f;
-
-        if (velocity.sqrMagnitude <= 0.001f)
-            return;
-
-        RotateToward(velocity.normalized);
-    }
-
-    private void RotateToward(Vector3 direction)
-    {
-        if (direction == Vector3.zero)
-            return;
-
-        Quaternion targetRotation = Quaternion.LookRotation(direction);
-        if (visual != null)
-            visual.rotation = Quaternion.Slerp(visual.rotation, targetRotation, Time.deltaTime * 12f);
-        else
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 12f);
-    }
-
-    private void TryBreakChaseDoor()
-    {
-        if (Time.time < nextAllowedDoorBreakTime)
-            return;
-
-        Vector3 direction = ResolveForwardMovementDirection();
-        if (direction.sqrMagnitude <= 0.0001f)
-            return;
-
-        Vector3 origin = transform.position + Vector3.up * Mathf.Max(0f, chaseDoorBreakHeight);
-        if (!Physics.SphereCast(origin, Mathf.Max(0.01f, chaseDoorBreakRadius), direction, out RaycastHit hitInfo, Mathf.Max(0f, chaseDoorBreakDistance), chaseDoorBreakMask, QueryTriggerInteraction.Ignore))
-            return;
-
-        Door door = hitInfo.transform.GetComponentInParent<Door>();
-        if (door == null || door.IsOpen || door.IsLocked || door.IsBroken)
-            return;
-
-        nextAllowedDoorBreakTime = Time.time + Mathf.Max(0.01f, chaseDoorBreakCooldown);
-        door.RequestBreak(direction);
-    }
-
-    private Vector3 ResolveForwardMovementDirection()
-    {
-        Vector3 direction = rb != null ? rb.linearVelocity : Vector3.zero;
-        direction.y = 0f;
-
-        if (direction.sqrMagnitude <= 0.01f && agent != null)
-        {
-            direction = agent.desiredVelocity;
-            direction.y = 0f;
-        }
-
-        if (direction.sqrMagnitude <= 0.01f && target != null)
-        {
-            direction = target.position - transform.position;
-            direction.y = 0f;
-        }
-
-        if (direction.sqrMagnitude <= 0.01f)
-        {
-            direction = visual != null ? visual.forward : transform.forward;
-            direction.y = 0f;
-        }
-
-        return direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.zero;
-    }
-
-    private bool TryFindVisibleTarget(out Transform foundTarget)
-    {
-        float closestDistance = float.PositiveInfinity;
-        foundTarget = null;
-
-        foreach (PlayerMovement player in PlayerRuntimeRegistry.Players)
-        {
-            if (player == null || IsDeadTarget(player.transform) || IsHiddenTarget(player.transform))
-                continue;
-
-            Vector3 offset = player.transform.position - transform.position;
-            offset.y = 0f;
-            float distance = offset.magnitude;
-            if (distance > detectionRange || distance >= closestDistance)
-                continue;
-
-            if (distance > proximityDetectionRange && !CanSee(player.transform, detectionRange))
-                continue;
-
-            if (preferUnclaimedChaseTargets && IsTargetClaimedByOtherEnemy(player.transform, distance))
-                continue;
-
-            closestDistance = distance;
-            foundTarget = player.transform;
-        }
-
-        return foundTarget != null;
-    }
-
-    private bool IsTargetClaimedByOtherEnemy(Transform candidate, float challengerDistance)
-    {
-        if (candidate == null)
-            return false;
-
-        foreach (CSHEnemy other in EnemyRuntimeRegistry.Enemies)
-        {
-            if (other == null || other == this || !other.isActiveAndEnabled)
-                continue;
-
-            if (!other.IsChasingTransform(candidate))
-                continue;
-
-            float otherDistance = GetFlatDistance(other.transform.position, candidate.position);
-            if (otherDistance <= challengerDistance + Mathf.Max(0f, targetClaimSwitchDistance))
-                return true;
-        }
-
-        return false;
-    }
-
-    private bool CanSee(Transform candidate, float maxDistance)
-    {
-        if (candidate == null)
-            return false;
-
-        Vector3 toTarget = candidate.position - transform.position;
-        float distance = toTarget.magnitude;
-        if (distance > maxDistance)
-            return false;
-
-        Vector3 flatDirection = toTarget;
-        flatDirection.y = 0f;
-
-        if (flatDirection.sqrMagnitude <= 0.0001f)
-            return true;
-
-        Vector3 forward = visual != null ? visual.forward : transform.forward;
-        forward.y = 0f;
-        if (forward.sqrMagnitude <= 0.0001f)
-            forward = transform.forward;
-
-        if (viewAngle < 359f && Vector3.Angle(forward.normalized, flatDirection.normalized) > viewAngle * 0.5f)
-            return false;
-
-        Vector3 origin = transform.position + Vector3.up * eyeHeight;
-        Vector3 targetPoint = candidate.position + Vector3.up * eyeHeight;
-        Vector3 rayDirection = targetPoint - origin;
-
-        RaycastHit[] hits = Physics.RaycastAll(origin, rayDirection.normalized, distance, lineOfSightMask, QueryTriggerInteraction.Ignore);
-        if (hits == null || hits.Length == 0)
-            return true;
-
-        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-
-        foreach (RaycastHit hit in hits)
-        {
-            if (hit.transform == null)
-                continue;
-
-            if (hit.transform == candidate || hit.transform.IsChildOf(candidate))
-                return true;
-
-            if (hit.transform == transform || hit.transform.IsChildOf(transform))
-                continue;
-
-            return false;
-        }
-
-        return true;
-    }
-
-    private bool ShouldLoseTarget(float deltaTime)
-    {
-        if (target == null || IsDeadTarget(target))
-            return true;
-
-        if (IsHiddenTarget(target))
-            return true;
-
-        if (IsCompromisedHiddenTarget(target))
-            return false;
-
-        if (preferUnclaimedChaseTargets && HasBetterEnemyClaimingTarget(target))
-            return true;
-
-        Vector3 offset = target.position - transform.position;
-        offset.y = 0f;
-        float distance = offset.magnitude;
-        if (distance > loseRange)
-            return true;
-
-        if (distance <= proximityDetectionRange)
-        {
-            lostSightTimer = 0f;
-            RefreshChasePointFromTarget();
-            return false;
-        }
-
-        if (CanSee(target, loseRange))
-        {
-            lostSightTimer = 0f;
-            RefreshChasePointFromTarget();
-            return false;
-        }
-
-        lostSightTimer += deltaTime;
-        return lostSightTimer >= loseSightDelay;
-    }
-
-    private bool HasBetterEnemyClaimingTarget(Transform candidate)
-    {
-        if (candidate == null)
-            return false;
-
-        float myDistance = GetFlatDistance(transform.position, candidate.position);
-
-        foreach (CSHEnemy other in EnemyRuntimeRegistry.Enemies)
-        {
-            if (other == null || other == this || !other.isActiveAndEnabled)
-                continue;
-
-            if (!other.IsChasingTransform(candidate))
-                continue;
-
-            float otherDistance = GetFlatDistance(other.transform.position, candidate.position);
-            if (otherDistance + Mathf.Max(0f, targetClaimSwitchDistance) < myDistance)
-                return true;
-
-            if (Mathf.Abs(otherDistance - myDistance) <= Mathf.Max(0f, targetClaimSwitchDistance)
-                && other.GetTargetClaimOrder() < GetTargetClaimOrder())
-                return true;
-        }
-
-        return false;
-    }
-
-    private int GetTargetClaimOrder()
-    {
-        return RealtimeEnemyId != 0 ? RealtimeEnemyId : GetInstanceID();
-    }
-
-    private static float GetFlatDistance(Vector3 from, Vector3 to)
-    {
-        Vector3 offset = to - from;
-        offset.y = 0f;
-        return offset.magnitude;
-    }
-
-    private Vector3 GetRandomPatrolPoint()
-    {
-        for (int i = 0; i < 12; i++)
-        {
-            Vector2 random = Random.insideUnitCircle * patrolRadius;
-            Vector3 candidate = spawnPosition + new Vector3(random.x, 0f, random.y);
-            if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 2f, NavMesh.AllAreas))
-                return hit.position;
-        }
-
-        return spawnPosition;
-    }
-
-    private Vector3 GetInitialWallPatrolDirection()
-    {
-        Vector3 direction = visual != null ? visual.forward : transform.forward;
-        direction.y = 0f;
-
-        if (direction.sqrMagnitude <= 0.0001f)
-            direction = moveDirection;
-
-        if (direction.sqrMagnitude <= 0.0001f)
-            direction = transform.forward;
-
-        direction.y = 0f;
-        return direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector3.forward;
-    }
-
-    private float GetRandomWallPatrolDistance()
-    {
-        float min = Mathf.Max(1f, Mathf.Min(wallPatrolDistanceRange.x, wallPatrolDistanceRange.y));
-        float max = Mathf.Max(min, Mathf.Max(wallPatrolDistanceRange.x, wallPatrolDistanceRange.y));
-        return Random.Range(min, max);
-    }
-
-    private bool ShouldRefreshWallPatrolDestination(Vector3 destination)
-    {
-        Vector3 offset = destination - transform.position;
-        offset.y = 0f;
-        if (offset.sqrMagnitude <= wallFollowDestinationRefreshDistance * wallFollowDestinationRefreshDistance)
-            return true;
-
-        if (agent != null && agent.enabled && agent.isOnNavMesh)
-            return !agent.pathPending && (!agent.hasPath || agent.pathStatus == NavMeshPathStatus.PathInvalid);
-
-        return false;
-    }
-
-    private bool TryGetWallFollowDestination(ref Vector3 travelDirection, ref int wallSide, out Vector3 destination, out bool shouldReverse)
-    {
-        shouldReverse = false;
-        destination = transform.position;
-        travelDirection.y = 0f;
-
-        if (travelDirection.sqrMagnitude <= 0.0001f)
-            travelDirection = GetInitialWallPatrolDirection();
-
-        travelDirection.Normalize();
-
-        if (IsWallPatrolForwardBlocked(travelDirection))
-        {
-            shouldReverse = true;
-            return false;
-        }
-
-        Vector3 origin = transform.position + Vector3.up * eyeHeight;
-        Vector3 sideDirection = GetSideDirection(travelDirection, wallSide);
-        bool foundWall = Physics.Raycast(origin, sideDirection, out RaycastHit wallHit, wallFollowProbeDistance, patrolWallMask, QueryTriggerInteraction.Ignore);
-
-        if (!foundWall && TryFindNearbyWall(origin, travelDirection, out int detectedSide))
-        {
-            wallSide = detectedSide;
-            sideDirection = GetSideDirection(travelDirection, wallSide);
-            foundWall = Physics.Raycast(origin, sideDirection, out wallHit, wallFollowProbeDistance, patrolWallMask, QueryTriggerInteraction.Ignore);
-        }
-
-        Vector3 wanderDirection = Quaternion.Euler(0f, Random.Range(patrolWanderYawRange.x, patrolWanderYawRange.y), 0f) * travelDirection;
-        Vector3 desiredDirection = wanderDirection.normalized;
-        Vector3 clearanceCorrection = Vector3.zero;
-        if (foundWall)
-        {
-            Vector3 wallForward = Vector3.Cross(Vector3.up, wallHit.normal).normalized;
-            if (Vector3.Dot(wallForward, desiredDirection) < 0f)
-                wallForward = -wallForward;
-
-            desiredDirection = Vector3.Slerp(desiredDirection, wallForward, patrolWallInfluence).normalized;
-            clearanceCorrection = sideDirection * ((wallHit.distance - wallFollowClearance) * Mathf.Clamp01(patrolWallInfluence));
-        }
-
-        Vector3 candidate = transform.position + desiredDirection * wallFollowStepDistance + clearanceCorrection;
-        if (TryProjectWallPatrolPoint(candidate, out destination))
-        {
-            travelDirection = desiredDirection;
-            return true;
-        }
-
-        candidate = transform.position + travelDirection * wallFollowStepDistance;
-        if (TryProjectWallPatrolPoint(candidate, out destination))
-            return true;
-
-        shouldReverse = true;
-        return false;
-    }
-
-    private Vector3 GetRandomReverseDirection(Vector3 currentDirection)
-    {
-        currentDirection.y = 0f;
-        if (currentDirection.sqrMagnitude <= 0.0001f)
-            currentDirection = GetInitialWallPatrolDirection();
-
-        float yaw = Random.Range(patrolReverseYawRange.x, patrolReverseYawRange.y);
-        Vector3 direction = Quaternion.Euler(0f, yaw, 0f) * currentDirection.normalized;
-        direction.y = 0f;
-        return direction.sqrMagnitude > 0.0001f ? direction.normalized : -currentDirection.normalized;
-    }
-
-    private Vector3 GetRandomForwardSegmentDirection(Vector3 currentDirection)
-    {
-        currentDirection.y = 0f;
-        if (currentDirection.sqrMagnitude <= 0.0001f)
-            currentDirection = GetInitialWallPatrolDirection();
-
-        float yaw = Random.Range(patrolSegmentYawRange.x, patrolSegmentYawRange.y);
-        Vector3 direction = Quaternion.Euler(0f, yaw, 0f) * currentDirection.normalized;
-        direction.y = 0f;
-        return direction.sqrMagnitude > 0.0001f ? direction.normalized : currentDirection.normalized;
-    }
-
-    private bool TryFindNearbyWall(Vector3 origin, Vector3 travelDirection, out int wallSide)
-    {
-        wallSide = 1;
-        Vector3 right = GetSideDirection(travelDirection, 1);
-        Vector3 left = GetSideDirection(travelDirection, -1);
-        bool hasRight = Physics.Raycast(origin, right, out RaycastHit rightHit, wallFollowProbeDistance, patrolWallMask, QueryTriggerInteraction.Ignore);
-        bool hasLeft = Physics.Raycast(origin, left, out RaycastHit leftHit, wallFollowProbeDistance, patrolWallMask, QueryTriggerInteraction.Ignore);
-
-        if (!hasRight && !hasLeft)
-            return false;
-
-        wallSide = hasLeft && (!hasRight || leftHit.distance < rightHit.distance) ? -1 : 1;
-        return true;
-    }
-
-    private bool IsWallPatrolForwardBlocked(Vector3 travelDirection)
-    {
-        Vector3 origin = transform.position + Vector3.up * eyeHeight;
-        return Physics.Raycast(origin, travelDirection, wallFollowForwardBlockDistance, patrolWallMask, QueryTriggerInteraction.Ignore);
-    }
-
-    private bool TryProjectWallPatrolPoint(Vector3 candidate, out Vector3 projectedPoint)
-    {
-        if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, 1.75f, NavMesh.AllAreas))
-        {
-            projectedPoint = hit.position;
-            return true;
-        }
-
-        projectedPoint = candidate;
-        return agent == null || !agent.enabled || !agent.isOnNavMesh;
+        perceptionComponent.ResetTargetTracking();
+        navigationComponent.ResetChaseTracking(newTarget);
     }
 
     private void BeginInvestigating(Vector3 center)
     {
         investigateCenter = center;
-        investigateTimer = Mathf.Max(0.1f, investigateDuration);
+        investigateTimer = Mathf.Max(0.1f, navigationComponent.InvestigateDuration);
         ChangeState(EnemyStateId.Investigate);
-    }
-
-    private Vector3 GetRandomInvestigatePoint()
-    {
-        Vector2 offset = Random.insideUnitCircle * Mathf.Max(0.1f, investigateRadius);
-        Vector3 candidate = investigateCenter + new Vector3(offset.x, 0f, offset.y);
-        if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, navMeshSnapDistance, NavMesh.AllAreas))
-            return hit.position;
-
-        return candidate;
-    }
-
-    private static Vector3 GetSideDirection(Vector3 forward, int side)
-    {
-        forward.y = 0f;
-        if (forward.sqrMagnitude <= 0.0001f)
-            forward = Vector3.forward;
-
-        Vector3 right = Vector3.Cross(Vector3.up, forward.normalized).normalized;
-        return side >= 0 ? right : -right;
-    }
-
-    private void ConfigureAgent()
-    {
-        if (agent == null)
-            return;
-
-        agent.updatePosition = false;
-        agent.updateRotation = false;
-        agent.speed = patrolSpeed;
-        agent.angularSpeed = 720f;
-        agent.acceleration = 16f;
-        agent.stoppingDistance = 0.1f;
-        agent.radius = Mathf.Max(agent.radius, 0.65f);
-        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
-        agent.avoidancePriority = Random.Range(35, 66);
-    }
-
-    private void SnapToNavMesh()
-    {
-        if (agent == null || !agent.enabled)
-            return;
-
-        if (!NavMesh.SamplePosition(transform.position, out NavMeshHit hit, navMeshSnapDistance, NavMesh.AllAreas))
-            return;
-
-        transform.position = hit.position;
-        agent.Warp(hit.position);
-    }
-
-    private Vector3 ProjectDestinationToNavMesh(Vector3 destination)
-    {
-        if (NavMesh.SamplePosition(destination, out NavMeshHit hit, navMeshSnapDistance, NavMesh.AllAreas))
-            return hit.position;
-
-        return destination;
-    }
-
-    private Vector3 ResolveChaseDestination(Transform chaseTarget)
-    {
-        useDirectChaseMovement = false;
-
-        if (chaseTarget == null)
-            return transform.position;
-
-        RefreshChasePointFromTarget();
-
-        if (chasePoint.IsValid)
-            return chasePoint.Position;
-
-        if (agent != null && agent.enabled && agent.isOnNavMesh)
-            return transform.position;
-
-        Vector3 targetPosition = chaseTarget.position;
-        float targetDistance = GetFlatDistance(transform.position, targetPosition);
-        if (targetDistance <= Mathf.Max(0f, chaseDirectFallbackDistance) || CanSee(chaseTarget, loseRange))
-        {
-            useDirectChaseMovement = true;
-            return targetPosition;
-        }
-
-        return transform.position;
-    }
-
-    private bool RefreshChasePointFromTarget()
-    {
-        if (target == null)
-            return false;
-
-        lastObservedTargetPosition = target.position;
-        if (!TryResolveChaseNavPoint(lastObservedTargetPosition, out NavigationPoint point))
-            return false;
-
-        if (chasePoint.IsValid && GetFlatDistance(chasePoint.Position, point.Position) > Mathf.Max(0.1f, chaseMaxNavPointJumpDistance))
-            return false;
-
-        chasePoint = point;
-        return true;
-    }
-
-    private bool TryResolveChaseNavPoint(Vector3 targetPosition, out NavigationPoint point)
-    {
-        point = default;
-
-        Vector3 towardEnemy = transform.position - targetPosition;
-        towardEnemy.y = 0f;
-
-        if (towardEnemy.sqrMagnitude <= 0.0001f)
-        {
-            towardEnemy = visual != null ? -visual.forward : -transform.forward;
-            towardEnemy.y = 0f;
-        }
-
-        if (towardEnemy.sqrMagnitude <= 0.0001f)
-            towardEnemy = Vector3.back;
-
-        towardEnemy.Normalize();
-
-        float maxBackoff = Mathf.Max(0f, chaseTargetBackoffDistance);
-        float step = Mathf.Max(0.1f, chaseTargetBackoffStep);
-        int steps = Mathf.Max(1, Mathf.CeilToInt(maxBackoff / step));
-        float sampleDistance = Mathf.Max(0.05f, chaseNavMeshSampleDistance, chaseTargetNavMeshSampleDistance);
-
-        for (int i = 0; i <= steps; i++)
-        {
-            float distance = Mathf.Min(i * step, maxBackoff);
-            Vector3 candidate = targetPosition + towardEnemy * distance;
-
-            if (TryProjectReachableChasePoint(candidate, sampleDistance, out Vector3 reachablePoint))
-            {
-                point = new NavigationPoint(reachablePoint);
-                return true;
-            }
-        }
-
-        if (TryProjectReachableChasePoint(targetPosition, sampleDistance, out Vector3 targetPoint))
-        {
-            point = new NavigationPoint(targetPoint);
-            return true;
-        }
-
-        return false;
-    }
-
-    private bool TryProjectReachableChasePoint(Vector3 candidate, float sampleDistance, out Vector3 point)
-    {
-        point = candidate;
-
-        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
-            return false;
-
-        if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, sampleDistance, NavMesh.AllAreas))
-            return false;
-
-        NavMeshPath path = new NavMeshPath();
-        if (!agent.CalculatePath(hit.position, path))
-            return false;
-
-        if (path.status == NavMeshPathStatus.PathInvalid)
-            return false;
-
-        point = hit.position;
-        return true;
     }
 
     private void ResolveAnimationDriver()
@@ -1114,31 +589,11 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         if (currentState.Id == EnemyStateId.Chase)
             return EnemyAnimationState.Chase;
 
-        if ((currentState.Id == EnemyStateId.Patrol || currentState.Id == EnemyStateId.Investigate) && IsMovingForAnimation())
+        if ((currentState.Id == EnemyStateId.Patrol || currentState.Id == EnemyStateId.Investigate)
+            && navigationComponent.IsMovingForAnimation())
             return EnemyAnimationState.Patrol;
 
         return EnemyAnimationState.Idle;
-    }
-
-    private bool IsMovingForAnimation()
-    {
-        if (agent != null && agent.enabled && agent.isOnNavMesh)
-        {
-            if (agent.pathPending)
-                return true;
-
-            if (agent.hasPath && agent.remainingDistance > patrolPointReachedDistance)
-                return true;
-
-            Vector3 agentVelocity = agent.velocity;
-            agentVelocity.y = 0f;
-            if (agentVelocity.sqrMagnitude > 0.01f)
-                return true;
-        }
-
-        Vector3 velocity = rb != null ? rb.linearVelocity : Vector3.zero;
-        velocity.y = 0f;
-        return velocity.sqrMagnitude > 0.01f;
     }
 
     private bool IsAttackAnimationPlaying()
@@ -1152,10 +607,9 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
     private bool IsKillAnimationPlaying()
     {
         if (Object == null)
-            return Time.time < localKillAnimationEndTime;
+            return combatComponent != null && combatComponent.IsLocalKillAnimationPlaying;
 
-        return Object != null
-            && networkSpawned
+        return networkSpawned
             && KillAnimationTimer.IsRunning
             && !KillAnimationTimer.Expired(Runner);
     }
@@ -1169,97 +623,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             return;
 
         KillAnimationTimer = TickTimer.None;
-        pendingKillKnockback = null;
-        pendingKillRagdoll = null;
-        localKillAnimationEndTime = 0f;
-    }
-
-    private void TriggerAttackAnimation()
-    {
-        if (Object != null && !Object.HasStateAuthority)
-            return;
-
-        if (Object != null && networkSpawned)
-        {
-            AttackAnimationTimer = TickTimer.CreateFromSeconds(Runner, attackAnimationDuration);
-            NetworkAttackSequence++;
-            NetworkAnimationState = EnemyAnimationState.Attack;
-            renderedAttackSequence = NetworkAttackSequence;
-        }
-
-        ApplyAnimationState(EnemyAnimationState.Attack, true);
-    }
-
-    private void TriggerKillAnimation(IKnockbackable knockbackable, RagdollEntityComponent ragdoll, Vector3 knockbackDirection, Transform killedVisual)
-    {
-        if (Object != null && !Object.HasStateAuthority)
-            return;
-
-        StopMoving();
-        RotateVisualTowardKillTarget(killedVisual);
-        pendingKillKnockback = knockbackable;
-        pendingKillRagdoll = ragdoll;
-        pendingKillKnockbackDirection = knockbackDirection.sqrMagnitude > 0.0001f ? knockbackDirection.normalized : transform.forward;
-        float killDuration = GetKillAnimationDuration();
-        localKillAnimationEndTime = Time.time + killDuration;
-
-        if (Object != null && networkSpawned)
-        {
-            KillAnimationTimer = TickTimer.CreateFromSeconds(Runner, killDuration);
-            AttackAnimationTimer = TickTimer.None;
-            NetworkKillSequence++;
-            NetworkAnimationState = EnemyAnimationState.Kill;
-            renderedKillSequence = NetworkKillSequence;
-        }
-
-        ApplyAnimationState(EnemyAnimationState.Kill, true);
-    }
-
-    private float GetKillAnimationDuration()
-    {
-        if (animationDriver == null)
-            ResolveAnimationDriver();
-
-        float fallback = Mathf.Max(0.1f, killAnimationDuration);
-        return animationDriver != null ? animationDriver.GetClipLength(EnemyAnimationState.Kill, fallback) : fallback;
-    }
-
-    private void RotateVisualTowardKillTarget(Transform killedVisual)
-    {
-        if (killedVisual == null)
-            return;
-
-        Transform rotatingTransform = visual != null ? visual : transform;
-        Vector3 direction = killedVisual.position - rotatingTransform.position;
-        direction.y = 0f;
-
-        if (direction.sqrMagnitude <= 0.0001f)
-            return;
-
-        Quaternion targetRotation = Quaternion.LookRotation(direction.normalized);
-        rotatingTransform.rotation = targetRotation;
-
-        if (Object != null && networkSpawned)
-            NetworkRotation = targetRotation;
-    }
-
-    public void AnimationEvent_ApplyKillKnockback(float force)
-    {
-        ApplyKillKnockback(force, killKnockbackUpwardForce);
-    }
-
-    private void ApplyKillKnockback(float force, float upwardForce)
-    {
-        if (Object != null && !Object.HasStateAuthority)
-            return;
-
-        if (pendingKillKnockback == null)
-            return;
-
-        pendingKillKnockback.ApplyKnockback(
-            pendingKillKnockbackDirection,
-            Mathf.Max(0f, force),
-            Mathf.Max(0f, upwardForce));
+        combatComponent.ClearPendingKill();
     }
 
     private void ApplyAnimationState(EnemyAnimationState stateId, bool force = false)
@@ -1268,315 +632,6 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             ResolveAnimationDriver();
 
         animationDriver?.Play(stateId, force);
-    }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (Object != null && !Object.HasStateAuthority)
-            return;
-
-        PlayerMovement player = collision.gameObject.GetComponentInParent<PlayerMovement>();
-        if (player != null && IsHiddenTarget(player.transform) && !CanSee(player.transform, loseRange))
-            return;
-
-        NetworkHealthComponent health = GetPlayerComponent<NetworkHealthComponent>(collision.gameObject, player);
-        RagdollEntityComponent ragdoll = GetPlayerComponent<RagdollEntityComponent>(collision.gameObject, player);
-        IKnockbackable knockbackable = GetPlayerKnockbackable(collision.gameObject, player);
-        Transform killedVisual = GetPlayerVisualTransform(collision.gameObject, player);
-
-        if (health == null && ragdoll == null && player == null)
-            return;
-
-        if (IsDeadPlayerTarget(health, ragdoll) || HasAlreadyPlayedKillFor(ragdoll))
-            return;
-
-        Vector3 knockbackDirection = collision.transform.position - transform.position;
-        knockbackDirection.y = 0f;
-        if (knockbackDirection.sqrMagnitude <= 0.0001f)
-            knockbackDirection = visual != null ? visual.forward : transform.forward;
-
-        if (health != null)
-        {
-            health.Damage(attackDamage);
-            if (IsDeadPlayerTarget(health, ragdoll))
-            {
-                if (ragdoll != null)
-                {
-                    ragdoll.Kill();
-                    ragdoll.ResetRagdollVelocity();
-                }
-
-                TriggerKillAnimationOnce(knockbackable, ragdoll, knockbackDirection, killedVisual);
-            }
-            else
-            {
-                TriggerAttackAnimation();
-            }
-        }
-        else if (ragdoll != null)
-        {
-            ragdoll.Kill();
-            ragdoll.ResetRagdollVelocity();
-            TriggerKillAnimationOnce(knockbackable, ragdoll, knockbackDirection, killedVisual);
-        }
-        else
-        {
-            TriggerAttackAnimation();
-        }
-
-        if (player != null && !player.IsLocalNetworkPlayer)
-            return;
-
-        if (hasKilledLocalPlayer)
-            return;
-
-        hasKilledLocalPlayer = true;
-
-        if (ui == null)
-            ui = FindDeathUI();
-
-        if (ui != null)
-            ui.SetActive(true);
-
-        StartCoroutine(Exit());
-    }
-
-    private GameObject FindDeathUI()
-    {
-        GameObject[] objects = Resources.FindObjectsOfTypeAll<GameObject>();
-        foreach (GameObject candidate in objects)
-        {
-            if (candidate.name == "DiedUI" && candidate.scene.IsValid())
-                return candidate;
-        }
-
-        return null;
-    }
-
-    private void InitializeMoveDirection()
-    {
-        Vector3 direction = target != null ? target.position - transform.position : transform.forward;
-        moveDirection = direction;
-        moveDirection.y = 0f;
-        moveDirection = moveDirection.sqrMagnitude > 0f ? moveDirection.normalized : transform.forward;
-    }
-
-    private static bool IsDeadTarget(Transform candidate)
-    {
-        if (candidate == null)
-            return true;
-
-        PlayerMovement player = candidate.GetComponentInParent<PlayerMovement>();
-        NetworkHealthComponent health = GetPlayerComponent<NetworkHealthComponent>(candidate.gameObject, player);
-        if (health != null && (health.IsDead || health.CurrentHealth <= 0f))
-            return true;
-
-        RagdollEntityComponent ragdoll = GetPlayerComponent<RagdollEntityComponent>(candidate.gameObject, player);
-        return ragdoll != null && (ragdoll.IsDead || ragdoll.IsRagdollEnabled);
-    }
-
-    private static bool IsHiddenTarget(Transform candidate)
-    {
-        if (candidate == null)
-            return false;
-
-        NetworkPlayerHidingComponent hiding = candidate.GetComponentInParent<NetworkPlayerHidingComponent>();
-        return hiding != null && hiding.IsHiding && !hiding.IsHidingCompromised;
-    }
-
-    private static bool IsCompromisedHiddenTarget(Transform candidate)
-    {
-        if (candidate == null)
-            return false;
-
-        NetworkPlayerHidingComponent hiding = candidate.GetComponentInParent<NetworkPlayerHidingComponent>();
-        return hiding != null && hiding.IsHiding && hiding.IsHidingCompromised;
-    }
-
-    public bool CanCurrentlySee(PlayerMovement player)
-    {
-        return player != null && !IsDeadTarget(player.transform) && CanSee(player.transform, loseRange);
-    }
-
-    public bool TryKillPlayer(PlayerMovement player)
-    {
-        if (player == null)
-            return false;
-
-        if (Object != null && !Object.HasStateAuthority)
-            return false;
-
-        NetworkHealthComponent health = GetPlayerComponent<NetworkHealthComponent>(player.gameObject, player);
-        RagdollEntityComponent ragdoll = GetPlayerComponent<RagdollEntityComponent>(player.gameObject, player);
-        IKnockbackable knockbackable = GetPlayerKnockbackable(player.gameObject, player);
-        Transform killedVisual = GetPlayerVisualTransform(player.gameObject, player);
-
-        if (IsDeadPlayerTarget(health, ragdoll))
-            return false;
-
-        Vector3 knockbackDirection = player.transform.position - transform.position;
-        knockbackDirection.y = 0f;
-        if (knockbackDirection.sqrMagnitude <= 0.0001f)
-            knockbackDirection = visual != null ? visual.forward : transform.forward;
-
-        if (health != null)
-            health.Kill();
-
-        if (ragdoll != null)
-        {
-            ragdoll.Kill();
-            ragdoll.ResetRagdollVelocity();
-        }
-
-        TriggerKillAnimationOnce(knockbackable, ragdoll, knockbackDirection, killedVisual);
-        return true;
-    }
-
-    public static bool TryKillIfAnyEnemyCanSee(PlayerMovement player)
-    {
-        if (player == null)
-            return false;
-
-        foreach (CSHEnemy enemy in EnemyRuntimeRegistry.Enemies)
-        {
-            if (enemy == null || !enemy.isActiveAndEnabled)
-                continue;
-
-            if (enemy.Object != null && !enemy.Object.HasStateAuthority)
-                continue;
-
-            if (!enemy.CanCurrentlySee(player))
-                continue;
-
-            return enemy.TryKillPlayer(player);
-        }
-
-        return false;
-    }
-
-    public static bool HasEnemyDetectedPlayer(PlayerMovement player)
-    {
-        if (player == null)
-            return false;
-
-        foreach (CSHEnemy enemy in EnemyRuntimeRegistry.Enemies)
-        {
-            if (enemy == null || !enemy.isActiveAndEnabled)
-                continue;
-
-            if (enemy.Object != null && !enemy.Object.HasStateAuthority)
-                continue;
-
-            if (enemy.CanCurrentlySee(player))
-                return true;
-        }
-
-        return false;
-    }
-
-    private bool TryKillCompromisedHiddenTarget()
-    {
-        if (target == null || !IsCompromisedHiddenTarget(target))
-            return false;
-
-        PlayerMovement player = target.GetComponentInParent<PlayerMovement>();
-        if (player == null)
-            return false;
-
-        float killDistance = Mathf.Max(0.75f, proximityDetectionRange);
-        if (GetFlatDistance(transform.position, target.position) > killDistance)
-            return false;
-
-        return TryKillPlayer(player);
-    }
-
-    private bool HasAlreadyPlayedKillFor(RagdollEntityComponent ragdoll)
-    {
-        return ragdoll != null && killAnimatedRagdolls.Contains(ragdoll);
-    }
-
-    private void TriggerKillAnimationOnce(IKnockbackable knockbackable, RagdollEntityComponent ragdoll, Vector3 knockbackDirection, Transform killedVisual)
-    {
-        if (ragdoll != null)
-            killAnimatedRagdolls.Add(ragdoll);
-
-        TriggerKillAnimation(knockbackable, ragdoll, knockbackDirection, killedVisual);
-    }
-
-    private static bool IsDeadPlayerTarget(NetworkHealthComponent health, RagdollEntityComponent ragdoll)
-    {
-        return (health != null && (health.IsDead || health.CurrentHealth <= 0f))
-            || (ragdoll != null && (ragdoll.IsDead || ragdoll.IsRagdollEnabled));
-    }
-
-    private static T GetPlayerComponent<T>(GameObject source, PlayerMovement player) where T : Component
-    {
-        T component = source.GetComponentInParent<T>();
-        if (component != null)
-            return component;
-
-        return player != null ? player.GetComponentInChildren<T>(true) : null;
-    }
-
-    private static Transform GetPlayerVisualTransform(GameObject source, PlayerMovement player)
-    {
-        Transform playerRoot = player != null ? player.transform : source.GetComponentInParent<PlayerMovement>()?.transform;
-        if (playerRoot == null)
-            return source.transform;
-
-        Transform visual = FindChildByName(playerRoot, "Visual");
-        if (visual != null)
-            return visual;
-
-        Animator animator = playerRoot.GetComponentInChildren<Animator>(true);
-        if (animator != null)
-            return animator.transform;
-
-        RagdollPartComponent ragdollPart = source.GetComponentInParent<RagdollPartComponent>();
-        if (ragdollPart != null)
-            return ragdollPart.transform;
-
-        return playerRoot;
-    }
-
-    private static Transform FindChildByName(Transform root, string childName)
-    {
-        if (root == null)
-            return null;
-
-        if (root.name == childName)
-            return root;
-
-        foreach (Transform child in root)
-        {
-            Transform found = FindChildByName(child, childName);
-            if (found != null)
-                return found;
-        }
-
-        return null;
-    }
-
-    private static IKnockbackable GetPlayerKnockbackable(GameObject source, PlayerMovement player)
-    {
-        IKnockbackable knockbackable = source.GetComponentInParent<IKnockbackable>();
-        if (knockbackable != null || player == null)
-            return knockbackable;
-
-        MonoBehaviour[] behaviours = player.GetComponentsInChildren<MonoBehaviour>(true);
-        foreach (MonoBehaviour behaviour in behaviours)
-        {
-            if (behaviour is IKnockbackable candidate)
-                return candidate;
-        }
-
-        return null;
-    }
-
-    private IEnumerator Exit()
-    {
-        yield return new WaitForSecondsRealtime(1f);
-        Application.Quit();
     }
 
     private sealed class IdleState : IEnemyState
@@ -1592,13 +647,13 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
         public void Enter()
         {
-            enemy.StopMoving();
-            enemy.idleTimer = enemy.idleAtPatrolPointTime;
+            enemy.navigationComponent.StopMoving();
+            enemy.idleTimer = enemy.navigationComponent.IdleAtPatrolPointTime;
         }
 
         public void Tick(float deltaTime)
         {
-            if (enemy.TryFindVisibleTarget(out Transform visibleTarget))
+            if (enemy.perceptionComponent.TryFindVisibleTarget(out Transform visibleTarget))
             {
                 enemy.AcquireTarget(visibleTarget);
                 enemy.ChangeState(EnemyStateId.Chase);
@@ -1634,16 +689,16 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         public void Enter()
         {
             wallSide = Random.value < 0.5f ? -1 : 1;
-            travelDirection = enemy.GetInitialWallPatrolDirection();
-            remainingSegmentDistance = enemy.GetRandomWallPatrolDistance();
+            travelDirection = enemy.navigationComponent.GetInitialWallPatrolDirection();
+            remainingSegmentDistance = enemy.navigationComponent.GetRandomWallPatrolDistance();
             lastPosition = enemy.transform.position;
             RefreshDestination();
-            enemy.MoveTo(patrolDestination, enemy.patrolSpeed);
+            enemy.navigationComponent.MoveTo(patrolDestination, enemy.navigationComponent.PatrolSpeed);
         }
 
         public void Tick(float deltaTime)
         {
-            if (enemy.TryFindVisibleTarget(out Transform visibleTarget))
+            if (enemy.perceptionComponent.TryFindVisibleTarget(out Transform visibleTarget))
             {
                 enemy.AcquireTarget(visibleTarget);
                 enemy.ChangeState(EnemyStateId.Chase);
@@ -1659,11 +714,11 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             if (remainingSegmentDistance <= 0f)
                 StartNextSegment();
 
-            if (enemy.ShouldRefreshWallPatrolDestination(patrolDestination))
+            if (enemy.navigationComponent.ShouldRefreshWallPatrolDestination(patrolDestination))
                 RefreshDestination();
 
-            enemy.MoveTo(patrolDestination, enemy.patrolSpeed);
-            enemy.RotateTowardMovement();
+            enemy.navigationComponent.MoveTo(patrolDestination, enemy.navigationComponent.PatrolSpeed);
+            enemy.navigationComponent.RotateTowardMovement();
         }
 
         public void Exit()
@@ -1672,12 +727,12 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
         private void StartNextSegment()
         {
-            if (Random.value < enemy.patrolRandomReverseChance)
-                travelDirection = enemy.GetRandomReverseDirection(travelDirection);
+            if (enemy.navigationComponent.ShouldRandomlyReversePatrol())
+                travelDirection = enemy.navigationComponent.GetRandomReverseDirection(travelDirection);
             else
-                travelDirection = enemy.GetRandomForwardSegmentDirection(travelDirection);
+                travelDirection = enemy.navigationComponent.GetRandomForwardSegmentDirection(travelDirection);
 
-            remainingSegmentDistance = enemy.GetRandomWallPatrolDistance();
+            remainingSegmentDistance = enemy.navigationComponent.GetRandomWallPatrolDistance();
             RefreshDestination();
         }
 
@@ -1685,17 +740,21 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         {
             for (int i = 0; i < 2; i++)
             {
-                if (enemy.TryGetWallFollowDestination(ref travelDirection, ref wallSide, out patrolDestination, out bool shouldReverse))
+                if (enemy.navigationComponent.TryGetWallFollowDestination(
+                    ref travelDirection,
+                    ref wallSide,
+                    out patrolDestination,
+                    out bool shouldReverse))
                     return;
 
                 if (shouldReverse)
                 {
-                    travelDirection = enemy.GetRandomReverseDirection(travelDirection);
-                    remainingSegmentDistance = enemy.GetRandomWallPatrolDistance();
+                    travelDirection = enemy.navigationComponent.GetRandomReverseDirection(travelDirection);
+                    remainingSegmentDistance = enemy.navigationComponent.GetRandomWallPatrolDistance();
                 }
             }
 
-            patrolDestination = enemy.GetRandomPatrolPoint();
+            patrolDestination = enemy.navigationComponent.GetRandomPatrolPoint();
         }
     }
 
@@ -1712,18 +771,18 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
         public void Enter()
         {
-            enemy.lostSightTimer = 0f;
+            enemy.perceptionComponent.ResetTargetTracking();
         }
 
         public void Tick(float deltaTime)
         {
-            if (enemy.TryKillCompromisedHiddenTarget())
+            if (enemy.combatComponent.TryKillCompromisedHiddenTarget(enemy.target))
                 return;
 
-            if (enemy.ShouldLoseTarget(deltaTime))
+            if (enemy.perceptionComponent.ShouldLoseTarget(enemy.target, deltaTime))
             {
-                bool hiddenTarget = IsHiddenTarget(enemy.target);
-                Vector3 lastKnownPosition = enemy.GetLastKnownTargetNavigationPosition();
+                bool hiddenTarget = EnemyPerceptionComponent.IsHiddenTarget(enemy.target);
+                Vector3 lastKnownPosition = enemy.navigationComponent.GetLastKnownTargetNavigationPosition(enemy.target);
                 enemy.target = null;
                 if (hiddenTarget)
                     enemy.BeginInvestigating(lastKnownPosition);
@@ -1732,19 +791,21 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
                 return;
             }
 
-            Vector3 destination = enemy.ResolveChaseDestination(enemy.target);
-            if (enemy.useDirectChaseMovement)
-                enemy.MoveDirectlyTo(destination, enemy.moveSpeed, deltaTime);
+            Vector3 destination = enemy.navigationComponent.ResolveChaseDestination(
+                enemy.target,
+                out bool useDirectChaseMovement);
+            if (useDirectChaseMovement)
+                enemy.navigationComponent.MoveDirectlyTo(destination, enemy.navigationComponent.MoveSpeed, deltaTime);
             else
-                enemy.MoveTo(destination, enemy.moveSpeed);
+                enemy.navigationComponent.MoveTo(destination, enemy.navigationComponent.MoveSpeed);
 
-            enemy.TryBreakChaseDoor();
-            enemy.RotateTowardMovement();
+            enemy.navigationComponent.TryBreakChaseDoor(enemy.target);
+            enemy.navigationComponent.RotateTowardMovement();
         }
 
         public void Exit()
         {
-            enemy.StopMoving();
+            enemy.navigationComponent.StopMoving();
         }
     }
 
@@ -1762,13 +823,13 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
         public void Enter()
         {
-            enemy.investigateTimer = Mathf.Max(0.1f, enemy.investigateDuration);
+            enemy.investigateTimer = Mathf.Max(0.1f, enemy.navigationComponent.InvestigateDuration);
             RefreshDestination();
         }
 
         public void Tick(float deltaTime)
         {
-            if (enemy.TryFindVisibleTarget(out Transform visibleTarget))
+            if (enemy.perceptionComponent.TryFindVisibleTarget(out Transform visibleTarget))
             {
                 enemy.AcquireTarget(visibleTarget);
                 enemy.ChangeState(EnemyStateId.Chase);
@@ -1782,11 +843,11 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
                 return;
             }
 
-            if (enemy.ShouldRefreshWallPatrolDestination(destination))
+            if (enemy.navigationComponent.ShouldRefreshWallPatrolDestination(destination))
                 RefreshDestination();
 
-            enemy.MoveTo(destination, enemy.patrolSpeed);
-            enemy.RotateTowardMovement();
+            enemy.navigationComponent.MoveTo(destination, enemy.navigationComponent.PatrolSpeed);
+            enemy.navigationComponent.RotateTowardMovement();
         }
 
         public void Exit()
@@ -1795,7 +856,9 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
         private void RefreshDestination()
         {
-            destination = enemy.GetRandomInvestigatePoint();
+            destination = enemy.navigationComponent.GetRandomInvestigatePoint(
+                enemy.investigateCenter,
+                enemy.navigationComponent.InvestigateRadius);
         }
     }
 }

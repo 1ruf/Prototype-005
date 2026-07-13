@@ -323,6 +323,7 @@ GameObject:
   - component: {fileID: 4137248384611582361}
   - component: {fileID: 7206385577637877798}
   - component: {fileID: 2247791530886058442}
+  - component: {fileID: 872410000000000101}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -391,6 +392,7 @@ MonoBehaviour:
   _acceleration: 90
   _deceleration: 90
   _mass: 7
+  _stamina: {fileID: 872410000000000101}
   _camAnimator: {fileID: 0}
   _controller: {fileID: 7206385577637877798}
   _groundChecker: {fileID: 4338796457787681335}
@@ -405,6 +407,23 @@ MonoBehaviour:
   _CameraPitch: 0
   _IsSprinting:
     _value: 0
+--- !u!114 &872410000000000101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5831458706045084818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8b3d4c12e6844d69d1e6f4adf413901, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxStamina: 100
+  drainPerSecond: 22
+  recoverPerSecond: 18
+  recoverDelay: 0.6
+  exhaustedRecoveryThreshold: 0.2
 --- !u!1001 &2798853054736567402
 PrefabInstance:
   m_ObjectHideFlags: 0
