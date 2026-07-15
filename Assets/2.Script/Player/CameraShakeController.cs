@@ -4,9 +4,9 @@ using UnityEngine;
 public class CameraShakeController : MonoBehaviour
 {
     [SerializeField] private CinemachineBasicMultiChannelPerlin noise;
-    [SerializeField] private float maxAmplitude = 1.2f;
-    [SerializeField] private float maxFrequency = 1.8f;
-    [SerializeField] private float blendSpeed = 8f;
+    [SerializeField] private float maxAmplitude = 0.25f;
+    [SerializeField] private float maxFrequency = 0.75f;
+    [SerializeField] private float blendSpeed = 6f;
 
     private float targetAmplitude;
     private float targetFrequency;

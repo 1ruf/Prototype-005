@@ -98,7 +98,7 @@ public static class ProductionArchitectureMigration
                 SetObjectReference(inventory, "input", inventoryInput);
                 SetObjectReference(inventory, "heldItemPresentation", heldPresentation);
                 SetObjectReference(inventoryInput, "inventory", inventory);
-                MigrateInventoryPresentationSettings(inventory, inventoryInput, heldPresentation);
+                MigrateInventoryPresentationSettings(inventory, heldPresentation);
             }
 
             if (hiding != null)
@@ -211,15 +211,9 @@ public static class ProductionArchitectureMigration
 
     private static void MigrateInventoryPresentationSettings(
         NetworkInventory inventory,
-        PlayerInventoryInput inventoryInput,
         InventoryHeldItemPresentation heldPresentation)
     {
         SerializedObject inventoryData = new SerializedObject(inventory);
-
-        SerializedObject inputData = new SerializedObject(inventoryInput);
-        inputData.FindProperty("dropKey").intValue = inventoryData.FindProperty("dropKey").intValue;
-        inputData.FindProperty("useInventoryLegacySettings").boolValue = false;
-        inputData.ApplyModifiedPropertiesWithoutUndo();
 
         SerializedObject presentationData = new SerializedObject(heldPresentation);
         presentationData.FindProperty("rightHandAnchor").objectReferenceValue = inventoryData.FindProperty("rightHandAnchor").objectReferenceValue;
@@ -230,7 +224,6 @@ public static class ProductionArchitectureMigration
         presentationData.FindProperty("useInventoryLegacySettings").boolValue = false;
         presentationData.ApplyModifiedPropertiesWithoutUndo();
 
-        inventoryInput.CommitLegacySettings();
         heldPresentation.CommitLegacySettings();
     }
 

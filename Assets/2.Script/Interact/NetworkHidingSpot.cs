@@ -45,10 +45,22 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
     public string InteractionActionText => actionText;
     public int InteractionPriority => interactionPriority;
 
-    public bool IsWithinUseRange(Vector3 playerPosition)
+    public bool IsWithinUseRange(Vector3 playerPosition, float extraDistance = 0f)
     {
-        float distance = Mathf.Max(0.1f, maxUseDistance);
-        return (transform.position - playerPosition).sqrMagnitude <= distance * distance;
+        float distance = Mathf.Max(0.1f, maxUseDistance + Mathf.Max(0f, extraDistance));
+        float distanceSqr = distance * distance;
+        Collider[] colliders = GetComponentsInChildren<Collider>(true);
+        foreach (Collider spotCollider in colliders)
+        {
+            if (spotCollider == null || !spotCollider.enabled)
+                continue;
+
+            Vector3 closestPoint = spotCollider.ClosestPoint(playerPosition);
+            if ((closestPoint - playerPosition).sqrMagnitude <= distanceSqr)
+                return true;
+        }
+
+        return (transform.position - playerPosition).sqrMagnitude <= distanceSqr;
     }
 
     public static NetworkHidingSpot Find(int id)

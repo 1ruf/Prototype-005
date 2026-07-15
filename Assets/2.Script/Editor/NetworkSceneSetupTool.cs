@@ -237,7 +237,8 @@ public static class NetworkSceneSetupTool
 
     private static void EnsureCameraShakeSetup(GameObject player)
     {
-        Transform cameraRoot = FindChildByName(player.transform, "Camera");
+        Transform cameraRoot = FindChildByName(player.transform, "CinemachineCamera") ??
+                               FindChildByName(player.transform, "Camera");
         if (cameraRoot == null)
             return;
 
@@ -298,7 +299,8 @@ public static class NetworkSceneSetupTool
             serializedShake.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        Component bobbingController = EnsureComponentByTypeName(cameraRoot.gameObject, "CameraBobbingController");
+        Transform motionRoot = FindChildByName(player.transform, "CameraMotionPivot") ?? cameraRoot;
+        Component bobbingController = EnsureComponentByTypeName(motionRoot.gameObject, "CameraBobbingController");
         if (bobbingController is UnityEngine.Behaviour bobbingBehaviour)
             bobbingBehaviour.enabled = false;
 

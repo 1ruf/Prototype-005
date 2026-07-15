@@ -692,6 +692,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             travelDirection = enemy.navigationComponent.GetInitialWallPatrolDirection();
             remainingSegmentDistance = enemy.navigationComponent.GetRandomWallPatrolDistance();
             lastPosition = enemy.transform.position;
+            enemy.navigationComponent.RecordPatrolCoverage();
             RefreshDestination();
             enemy.navigationComponent.MoveTo(patrolDestination, enemy.navigationComponent.PatrolSpeed);
         }
@@ -710,6 +711,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             moved.y = 0f;
             remainingSegmentDistance -= moved.magnitude;
             lastPosition = currentPosition;
+            enemy.navigationComponent.RecordPatrolCoverage();
 
             if (remainingSegmentDistance <= 0f)
                 StartNextSegment();
@@ -738,6 +740,9 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
         private void RefreshDestination()
         {
+            if (enemy.navigationComponent.TryGetCoordinatedPatrolPoint(out patrolDestination))
+                return;
+
             for (int i = 0; i < 2; i++)
             {
                 if (enemy.navigationComponent.TryGetWallFollowDestination(

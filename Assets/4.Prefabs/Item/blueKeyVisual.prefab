@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 7516843596283692418}
   - component: {fileID: 8563916002607691868}
   m_Layer: 0
-  m_Name: keyVisual
+  m_Name: blueKeyVisual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -64,7 +64,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2dbb9b80cd0b16f4cb9a50655d8dd342, type: 2}
+  - {fileID: 2100000, guid: 406886d440dd5374ea5d5c95a33e19b7, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

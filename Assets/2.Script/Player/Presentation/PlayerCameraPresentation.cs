@@ -428,6 +428,7 @@ public sealed class PlayerCameraPresentation : MonoBehaviour
         AddBehavioursByTypeName(nameof(MouseLookSystem), behaviours);
         AddBehavioursByTypeName(nameof(CameraBobbingController), behaviours);
         AddBehavioursByTypeName(nameof(CameraShakeController), behaviours);
+        AddBehavioursByTypeName("FirstPersonEquipmentAim", behaviours);
         return behaviours.ToArray();
     }
 

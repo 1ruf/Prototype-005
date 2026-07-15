@@ -161,7 +161,8 @@ public class NetworkPlayerHidingComponent : NetworkEntityBehaviour
 
     private void TryEnterStateAuthority(NetworkHidingSpot spot)
     {
-        if (spot == null || IsHiding || !spot.IsWithinUseRange(Owner.transform.position))
+        const float networkDistanceTolerance = 0.75f;
+        if (spot == null || IsHiding || !spot.IsWithinUseRange(Owner.transform.position, networkDistanceTolerance))
         {
             RPC_ApplyServerDecision(false);
             return;

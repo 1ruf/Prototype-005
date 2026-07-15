@@ -1246,7 +1246,7 @@ MonoBehaviour:
   visualPose: {fileID: 4506032547368908225}
   playerHiddenPose: {fileID: 0}
   exitPose: {fileID: 7941487523963072254}
-  requiredHoldTime: 1
+  requiredHoldTime: 0.5
   hidingVirtualCamera: {fileID: 8580576853384460683}
   hidingCameraPriority: 1000
   objectAnimator: {fileID: 5724158788824746017}

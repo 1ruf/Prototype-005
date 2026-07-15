@@ -36,8 +36,11 @@ public sealed class Lever : MonoBehaviour, IInteractable, IHoldInteractable, IIn
 
     public void Interact()
     {
-        if (TryToggleTargets())
+        if (HasToggleableTargets())
+        {
+            ToggleTargets();
             return;
+        }
 
         SetState(!isOn, true);
     }
@@ -49,13 +52,12 @@ public sealed class Lever : MonoBehaviour, IInteractable, IHoldInteractable, IIn
 
     public void SetStateFromSynchronizedSource(bool value, bool playSound, bool animate = true)
     {
-        if (isOn == value)
-            return;
+        bool stateChanged = isOn != value;
 
         isOn = value;
         ApplyVisualState(animate);
 
-        if (playSound)
+        if (stateChanged && playSound)
             PlayToggleSound();
     }
 
@@ -77,8 +79,7 @@ public sealed class Lever : MonoBehaviour, IInteractable, IHoldInteractable, IIn
         if (handlePivot == null)
             return;
 
-        Vector3 rotation = handlePivot.localEulerAngles;
-        rotation.x = isOn ? 180f : 0f;
+        Vector3 rotation = new Vector3(isOn ? 180f : 0f, 0f, 0f);
         handlePivot.DOKill();
 
         if (!animate || handleTweenDuration <= 0f)
@@ -88,25 +89,31 @@ public sealed class Lever : MonoBehaviour, IInteractable, IHoldInteractable, IIn
         }
 
         handlePivot.DOLocalRotate(rotation, handleTweenDuration, RotateMode.Fast)
-            .SetEase(Ease.OutExpo);
+            .SetEase(Ease.OutExpo)
+            .OnComplete(() => handlePivot.localEulerAngles = rotation);
     }
 
-    private bool TryToggleTargets()
+    private bool HasToggleableTargets()
     {
         if (controllableTargets == null)
             return false;
 
-        bool toggled = false;
         foreach (Component target in controllableTargets)
         {
-            if (target is not ILeverToggleable toggleable)
-                continue;
-
-            toggleable.ToggleLeverState();
-            toggled = true;
+            if (target is ILeverToggleable)
+                return true;
         }
 
-        return toggled;
+        return false;
+    }
+
+    private void ToggleTargets()
+    {
+        foreach (Component target in controllableTargets)
+        {
+            if (target is ILeverToggleable toggleable)
+                toggleable.ToggleLeverState();
+        }
     }
 
     private void NotifyTargets()

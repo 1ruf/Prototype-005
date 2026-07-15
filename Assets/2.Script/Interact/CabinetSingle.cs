@@ -3,7 +3,7 @@ using Fusion;
 using UnityEngine;
 
 [RequireComponent(typeof(NetworkObject))]
-public class CabinetSingle : NetworkBehaviour, IInteractable, IPlayerInteractable, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
+public class CabinetSingle : NetworkBehaviour, IInteractable, IPlayerInteractable, IInteractionCooldown, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
     [SerializeField] private string interactionText = "Cabinet";
     [SerializeField] private string openActionText = "Open";
@@ -11,6 +11,7 @@ public class CabinetSingle : NetworkBehaviour, IInteractable, IPlayerInteractabl
     [SerializeField] private int interactPriority;
     [SerializeField] private Vector3 targetPos;
     [SerializeField] private float tweenDuration = 1f;
+    [SerializeField, Min(0f)] private float interactionCooldownDuration = 0.1f;
 
     [Header("Network Request Security")]
     [SerializeField] private ServerRequestValidationPolicy requestValidationPolicy = ServerRequestValidationPolicy.CreateInteractionDefault();
@@ -21,12 +22,14 @@ public class CabinetSingle : NetworkBehaviour, IInteractable, IPlayerInteractabl
 
     private bool localIsOpened;
     private bool hasAppliedVisualState;
+    private float interactionCooldownEndTime;
 
     private const int OpenRequestRateLimitScope = 201;
 
     public int InteractionPriority => interactPriority;
     public string InteractionText => interactionText;
     public string InteractionActionText => IsOpen ? closeActionText : openActionText;
+    public bool IsInteractionOnCooldown => Time.unscaledTime < interactionCooldownEndTime;
     private bool IsOpen => Object != null && Object.IsValid ? IsOpenState : localIsOpened;
 
     private void Awake()
@@ -53,6 +56,15 @@ public class CabinetSingle : NetworkBehaviour, IInteractable, IPlayerInteractabl
     public void Interact(PlayerMovement player)
     {
         RequestSetOpen(!IsOpen);
+    }
+
+    public bool TryBeginInteractionCooldown()
+    {
+        if (IsInteractionOnCooldown)
+            return false;
+
+        interactionCooldownEndTime = Time.unscaledTime + Mathf.Max(0f, interactionCooldownDuration);
+        return true;
     }
 
     private void RequestSetOpen(bool open)

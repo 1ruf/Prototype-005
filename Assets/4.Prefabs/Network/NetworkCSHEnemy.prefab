@@ -1758,7 +1758,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   eyeHeight: 1.5
-  patrolRadius: 8
+  patrolRadius: 30
   patrolPointReachedDistance: 0.6
   idleAtPatrolPointTime: 1.2
   investigateDuration: 4

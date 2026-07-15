@@ -107,11 +107,11 @@ MonoBehaviour:
   actionText: Use
   interactionPriority: 20
   requiredHoldTime: 0.2
-  isOn: 0
+  isOn: 1
   controllableTargets:
   - {fileID: 2403709369557741002}
   handlePivot: {fileID: 3469592358745299288}
-  handleTweenDuration: 0.2
+  handleTweenDuration: 0.3
   audioSource: {fileID: 6263777103187197409}
   turnOnClip: {fileID: 8300000, guid: 6a47e9e6fc87a3e4c84e79eb1e1d60c0, type: 3}
   turnOffClip: {fileID: 8300000, guid: 6a47e9e6fc87a3e4c84e79eb1e1d60c0, type: 3}
@@ -237,7 +237,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d815ee7842b4407a4906a41820eaf80, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionCooldown
-  cooldownDuration: 0.35
+  cooldownDuration: 1
 --- !u!1 &3249673804224018737
 GameObject:
   m_ObjectHideFlags: 0

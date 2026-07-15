@@ -6,12 +6,12 @@ public class Flashlight : PlayerEquipment
     [SerializeField] private GameObject beamObject;
     [SerializeField] private float firstPersonSpotAngle = 64f;
     [SerializeField] private float thirdPersonSpotAngle = 72f;
-    [SerializeField] private float runSwayPitch = 2f;
+    [SerializeField] private float runSwayPitch = 0.35f;
     [SerializeField] private float runSwayYaw = 0f;
     [SerializeField] private float runSwayRoll = 0f;
-    [SerializeField] private float runSwayFrequency = 4f;
-    [SerializeField] private float walkSwayMultiplier = 0.25f;
-    [SerializeField] private float swayRotationSmoothSpeed = 16f;
+    [SerializeField] private float runSwayFrequency = 0.8f;
+    [SerializeField] private float walkSwayMultiplier = 0.12f;
+    [SerializeField] private float swayRotationSmoothSpeed = 5f;
     [SerializeField] private float thirdPersonLookPitchMultiplier = 0f;
 
     private float swayTime;

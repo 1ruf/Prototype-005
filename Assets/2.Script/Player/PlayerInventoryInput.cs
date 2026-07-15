@@ -3,20 +3,11 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerInventoryInput : MonoBehaviour
 {
-    [SerializeField] private bool useInventoryLegacySettings = true;
     [SerializeField] private NetworkInventory inventory;
-    [SerializeField] private KeyCode dropKey = KeyCode.G;
 
-    public void Initialize(NetworkInventory target, KeyCode configuredDropKey)
+    public void Initialize(NetworkInventory target)
     {
         inventory = target != null ? target : inventory;
-        if (useInventoryLegacySettings)
-            dropKey = configuredDropKey;
-    }
-
-    public void CommitLegacySettings()
-    {
-        useInventoryLegacySettings = false;
     }
 
     private void Update()
@@ -33,7 +24,7 @@ public sealed class PlayerInventoryInput : MonoBehaviour
         if (EmoteWheelController.IsBlockingGameplayInput || !inventory.CanUseInventoryItems())
             return;
 
-        if (Input.GetKeyDown(dropKey) && inventory.HeldItemId != 0)
+        if (Input.GetKeyDown(KeyCode.Q) && inventory.HeldItemId != 0)
             inventory.RequestDropHeldItem();
 
         if (inventory.IsDropRequestPending())

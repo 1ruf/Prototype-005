@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 5313552319096581901}
   - component: {fileID: 6576855712757051285}
   m_Layer: 9
-  m_Name: key
+  m_Name: greenKey
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -68,7 +68,7 @@ MonoBehaviour:
   m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SortKey: 1116171353
+  SortKey: 3579897539
   ObjectInterest: 1
   Flags: 262145
   NestedObjects: []
@@ -87,8 +87,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a91c134e5145ac4496c37e2ce05c99a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  item: {fileID: 11400000, guid: 14d754aafd9c18b489eb026d0fb6e835, type: 2}
+  fallbackInteractionText: Item
+  actionText: Pick Up
+  interactionPriority: 0
+  item: {fileID: 11400000, guid: d7886679d22def847a47d3277355451d, type: 2}
   pickupDistance: 3
+  requiredHoldTime: 0
   renderers:
   - {fileID: 2968550745010720215}
   colliders:
@@ -147,6 +151,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8563916002607691868, guid: 91822623502712b419a20e4b4473f219, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: f2a691564bf03dc4b8f1d41bdd48207b, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

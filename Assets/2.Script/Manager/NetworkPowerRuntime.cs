@@ -9,6 +9,9 @@ public static class NetworkPowerRuntime
     {
         PowerController controller = GetPowerController();
         controller?.GetContainer(key).RegistPowerObject(powerable);
+
+        if (controller != null && controller.HasPowerState(key))
+            powerable.PowerSupply(controller.GetPower(key));
     }
 
     public static void UnregisterPowerable(string key, IPowerable powerable)

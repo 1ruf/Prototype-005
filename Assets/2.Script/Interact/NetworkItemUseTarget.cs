@@ -79,7 +79,7 @@ public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IP
         if (Vector3.Distance(inventory.transform.position, transform.position) > useDistance)
             return false;
 
-        return inventory.HasItem(RequiredItemId, 1);
+        return inventory.IsHoldingItem(RequiredItemId);
     }
 
     public bool TryGetInteractionFailureMessage(PlayerMovement player, out string message)
@@ -118,12 +118,12 @@ public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IP
             return true;
         }
 
-        if (!inventory.HasItem(RequiredItemId, 1))
+        if (!inventory.IsHoldingItem(RequiredItemId))
         {
             string itemName = requiredItem != null && !string.IsNullOrWhiteSpace(requiredItem.ItemName)
                 ? requiredItem.ItemName
                 : "Required item";
-            message = $"{itemName} is required.";
+            message = $"You need to hold {itemName}.";
             return true;
         }
 
@@ -136,7 +136,7 @@ public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IP
         if (!Object.HasStateAuthority || !CanUse(inventory))
             return false;
 
-        if (consumeItem && !inventory.TryRemoveItem(RequiredItemId, 1))
+        if (consumeItem && !inventory.TryConsumeHeldItem(RequiredItemId))
             return false;
 
         IsResolved = true;

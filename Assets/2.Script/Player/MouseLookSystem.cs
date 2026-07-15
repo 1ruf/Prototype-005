@@ -13,6 +13,7 @@ public class MouseLookSystem : MonoBehaviour
     [SerializeField] private float _cameraMaxAngle = 90f;
     [SerializeField] private float _smoothTime = 0.1f;
     [SerializeField] private float _cameraXMoveSpeed = 3.5f;
+    [SerializeField] private float _networkRotationSmoothSpeed = 14f;
     [SerializeField] private bool _followHeadPosition = true;
     [SerializeField] private Transform _headPositionTarget;
 
@@ -24,6 +25,15 @@ public class MouseLookSystem : MonoBehaviour
     private Quaternion _baseHeadLocalRotation;
     private Vector3 _headFollowLocalPosition;
     private bool _hasHeadFollowLocalPosition;
+    private Quaternion _smoothedNetworkRotation;
+    private bool _hasSmoothedNetworkRotation;
+    private float _visualNetworkYaw;
+    private float _visualNetworkPitch;
+    private bool _hasVisualNetworkLook;
+
+    public Quaternion RawViewRotation => _hasVisualNetworkLook
+        ? Quaternion.Euler(_visualNetworkPitch, _visualNetworkYaw, 0f)
+        : transform.rotation;
 
     private void Awake()
     {
@@ -89,8 +99,30 @@ public class MouseLookSystem : MonoBehaviour
 
     private void ApplyNetworkCameraPitch()
     {
-        transform.localRotation = _baseLocalRotation * Quaternion.Euler(_networkPlayer.CameraPitch, 0f, 0f);
-        SetHeadAngle(_networkPlayer.CameraPitch);
+        float networkYaw = _networkPlayer.BodyYaw;
+        float networkPitch = _networkPlayer.CameraPitch;
+        if (!_hasVisualNetworkLook)
+        {
+            _visualNetworkYaw = networkYaw;
+            _visualNetworkPitch = networkPitch;
+            _hasVisualNetworkLook = true;
+        }
+
+        _visualNetworkYaw = networkYaw;
+        _visualNetworkPitch = networkPitch;
+
+        Quaternion targetRotation = Quaternion.Euler(_visualNetworkPitch, _visualNetworkYaw, 0f) * _baseLocalRotation;
+
+        if (!_hasSmoothedNetworkRotation)
+        {
+            _smoothedNetworkRotation = targetRotation;
+            _hasSmoothedNetworkRotation = true;
+        }
+
+        float blend = 1f - Mathf.Exp(-Mathf.Max(0f, _networkRotationSmoothSpeed) * Time.deltaTime);
+        _smoothedNetworkRotation = Quaternion.Slerp(_smoothedNetworkRotation, targetRotation, blend);
+        transform.rotation = _smoothedNetworkRotation;
+        SetHeadAngle(_visualNetworkPitch);
     }
 
     private void SetHeadAngle(float pitch)

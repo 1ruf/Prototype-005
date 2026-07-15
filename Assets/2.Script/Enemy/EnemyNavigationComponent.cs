@@ -283,6 +283,47 @@ public sealed class EnemyNavigationComponent : MonoBehaviour
         return spawnPosition;
     }
 
+    public bool TryGetCoordinatedPatrolPoint(out Vector3 destination)
+    {
+        destination = spawnPosition;
+        Vector3 origin = coordinator.transform.position;
+        float patrolRange = Mathf.Max(24f, settings.PatrolRadius);
+        float bestScore = float.NegativeInfinity;
+        bool found = false;
+
+        for (int i = 0; i < 28; i++)
+        {
+            Vector2 direction = Random.insideUnitCircle;
+            if (direction.sqrMagnitude <= 0.001f)
+                continue;
+
+            // Bias away from the immediate area: patrols should make meaningful sweeps.
+            float distance = patrolRange * Random.Range(0.35f, 1f);
+            Vector3 candidate = spawnPosition + new Vector3(direction.x, 0f, direction.y).normalized * distance;
+            if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, settings.NavMeshSnapDistance, NavMesh.AllAreas)
+                || !HasValidPathTo(hit.position))
+                continue;
+
+            float score = EnemyPatrolCoverageRegistry.GetDestinationScore(coordinator, origin, hit.position);
+            if (score <= bestScore)
+                continue;
+
+            bestScore = score;
+            destination = hit.position;
+            found = true;
+        }
+
+        if (found)
+            EnemyPatrolCoverageRegistry.ReserveDestination(coordinator, destination);
+
+        return found;
+    }
+
+    public void RecordPatrolCoverage()
+    {
+        EnemyPatrolCoverageRegistry.RecordPatrolPosition(coordinator.transform.position);
+    }
+
     public Vector3 GetInitialWallPatrolDirection()
     {
         Vector3 direction = visual != null ? visual.forward : coordinator.transform.forward;
@@ -643,6 +684,17 @@ public sealed class EnemyNavigationComponent : MonoBehaviour
             return hit.position;
 
         return destination;
+    }
+
+    private bool HasValidPathTo(Vector3 destination)
+    {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            return true;
+
+        NavMeshPath path = new NavMeshPath();
+        return agent.CalculatePath(destination, path)
+            && path.status != NavMeshPathStatus.PathInvalid
+            && path.corners.Length > 1;
     }
 
     private bool TryResolveChaseNavPoint(Vector3 targetPosition, out NavigationPoint point)
