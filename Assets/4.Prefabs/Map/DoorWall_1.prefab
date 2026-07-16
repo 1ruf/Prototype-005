@@ -1450,7 +1450,7 @@ GameObject:
   - component: {fileID: 9157051684470094520}
   - component: {fileID: 3878729957009673196}
   - component: {fileID: 1202370237817031456}
-  m_Layer: 9
+  m_Layer: 10
   m_Name: DoorPivot
   m_TagString: Untagged
   m_Icon: {fileID: 0}

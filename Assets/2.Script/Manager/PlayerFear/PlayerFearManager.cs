@@ -1,9 +1,11 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
 public sealed class PlayerFearManager : MonoBehaviour
 {
     private const string RuntimeManagerName = "PlayerFearManager";
+    private const string TitleSceneName = "CSHMenu";
 
     public static PlayerFearManager Instance { get; private set; }
 
@@ -31,6 +33,9 @@ public sealed class PlayerFearManager : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void EnsureSceneInstance()
     {
+        if (SceneManager.GetActiveScene().name == TitleSceneName)
+            return;
+
         if (Instance != null || FindFirstObjectByType<PlayerFearManager>() != null)
             return;
 
