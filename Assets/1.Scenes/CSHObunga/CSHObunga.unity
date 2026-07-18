@@ -54322,6 +54322,7 @@ GameObject:
   - component: {fileID: 1241745476}
   - component: {fileID: 1241745478}
   - component: {fileID: 1241745477}
+  - component: {fileID: 1241745479}
   m_Layer: 0
   m_Name: Pipes_14
   m_TagString: Untagged
@@ -54398,6 +54399,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1241745475}
   m_Mesh: {fileID: 5812646784828993083, guid: e27bfa684cbabba4399a0516f4a75c92, type: 3}
+--- !u!114 &1241745479
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1241745475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63997020ffa347c45a376bc1516001eb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1246401045
 GameObject:
   m_ObjectHideFlags: 0
@@ -72638,6 +72651,7 @@ GameObject:
   - component: {fileID: 1529753041}
   - component: {fileID: 1529753043}
   - component: {fileID: 1529753042}
+  - component: {fileID: 1529753044}
   m_Layer: 0
   m_Name: Pipes_07.001
   m_TagString: Untagged
@@ -72713,6 +72727,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1529753040}
   m_Mesh: {fileID: -998620588259446262, guid: e27bfa684cbabba4399a0516f4a75c92, type: 3}
+--- !u!65 &1529753044
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1529753040}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.0033400012, y: 0.003340002, z: 0.0011116352}
+  m_Center: {x: 0.0000000010404367, y: 0.0000000032782552, z: 0.0019037024}
 --- !u!1 &1539813765
 GameObject:
   m_ObjectHideFlags: 0
