@@ -10,7 +10,7 @@ using UnityEngine.UI;
 public sealed class LookAtDescription : MonoBehaviour
 {
     [TextArea(2, 5)]
-    [SerializeField] private string description = "Object description";
+    [SerializeField] private string description = "물체 설명";
     [SerializeField, Min(0.1f)] private float maximumViewDistance = 5f;
 
     private static int lastCheckedFrame = -1;

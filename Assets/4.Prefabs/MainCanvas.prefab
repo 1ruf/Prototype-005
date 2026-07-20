@@ -398,7 +398,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: DIED
+  m_text: 사망
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: a592016e3b31ace4a983927e3ef57421, type: 2}
   m_sharedMaterial: {fileID: 3784671001783871853, guid: a592016e3b31ace4a983927e3ef57421, type: 2}

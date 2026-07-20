@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemId: 1003
   ItemSprite: {fileID: 371644112, guid: fd4ec5fc7b91dae44a26bde5a0276e01, type: 3}
-  ItemName: Green Key
-  Description: It can open green lock.
+  ItemName: 초록 열쇠
+  Description: 초록 자물쇠를 열 수 있습니다.
   LocalPosition: {x: 0, y: 0, z: 0}
   Useable: 0
   ItemPrefab: {fileID: 2015168443688019592, guid: 29d18264b686aa845ba57416487a6775, type: 3}

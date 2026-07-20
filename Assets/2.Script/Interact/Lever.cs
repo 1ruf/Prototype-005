@@ -5,8 +5,8 @@ using DG.Tweening;
 public sealed class Lever : MonoBehaviour, IInteractable, IHoldInteractable, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
     [Header("Interaction")]
-    [SerializeField] private string interactionText = "Lever";
-    [SerializeField] private string actionText = "Use";
+    [SerializeField] private string interactionText = "레버";
+    [SerializeField] private string actionText = "사용";
     [SerializeField] private int interactionPriority = 20;
     [SerializeField, Min(0f)] private float requiredHoldTime = 0.2f;
 

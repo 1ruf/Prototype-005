@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemId: 1004
   ItemSprite: {fileID: 561911800, guid: fd4ec5fc7b91dae44a26bde5a0276e01, type: 3}
-  ItemName: Blue Key
-  Description: It can open blue lock.
+  ItemName: 파란 열쇠
+  Description: 파란 자물쇠를 열 수 있습니다.
   LocalPosition: {x: 0, y: 0, z: 0}
   Useable: 0
   ItemPrefab: {fileID: 2015168443688019592, guid: 568465088c08dfc4f866d34f2ac902da, type: 3}

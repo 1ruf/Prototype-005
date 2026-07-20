@@ -62,7 +62,7 @@ public sealed class CSHGameController : GameControllerBase
             return;
 
         if (host.PartAmountText != null)
-            host.PartAmountText.text = $"part:{partList.Count}/{TargetPartAmount}";
+            host.PartAmountText.text = $"부품: {partList.Count}/{TargetPartAmount}";
 
         if (partList.Count < TargetPartAmount)
             return;

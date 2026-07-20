@@ -2,8 +2,8 @@ using UnityEngine;
 
 public class GrabTool : MonoBehaviour, IInteractable, IHoldInteractable, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
-    [SerializeField] private string interactionText = "Object";
-    [SerializeField] private string actionText = "Grab";
+    [SerializeField] private string interactionText = "물체";
+    [SerializeField] private string actionText = "잡기";
     [SerializeField] private int interactionPriority = 50;
     [SerializeField] private Transform _Hand;
     [SerializeField] private float requiredHoldTime;

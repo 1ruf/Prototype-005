@@ -304,7 +304,7 @@ public class ScreenManager : MonoBehaviour
         if (prompt != null && !string.IsNullOrWhiteSpace(prompt.InteractionActionText))
             return prompt.InteractionActionText;
 
-        return "Interact";
+        return "상호작용";
     }
 
     private static RaycastHit GetNearestHit(RaycastHit[] hits)

@@ -100,7 +100,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   interactionText: 
-  actionText: Use
+  actionText: 숨기
   interactionPriority: 80
   requiredItem: {fileID: 11400000, guid: 14d754aafd9c18b489eb026d0fb6e835, type: 2}
   useDistance: 3

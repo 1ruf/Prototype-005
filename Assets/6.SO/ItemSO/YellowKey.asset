@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemId: 1002
   ItemSprite: {fileID: -1716993297, guid: fd4ec5fc7b91dae44a26bde5a0276e01, type: 3}
-  ItemName: Yellow Key
-  Description: It can open yellow lock.
+  ItemName: 노란 열쇠
+  Description: 노란 자물쇠를 열 수 있습니다.
   LocalPosition: {x: 0, y: 0, z: 0}
   Useable: 0
   ItemPrefab: {fileID: 2015168443688019592, guid: 0b5d1a0e3dfe67d4386e342385465f20, type: 3}

@@ -103,8 +103,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 638d850e920c453b831ea8c257a9d66e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Lever
-  interactionText: Lever
-  actionText: Use
+  interactionText: 레버
+  actionText: 사용
   interactionPriority: 20
   requiredHoldTime: 0.2
   isOn: 1

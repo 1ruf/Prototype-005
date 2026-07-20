@@ -6,7 +6,7 @@ using UnityEngine;
 public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IPlayerInteractable, IHoldInteractable, IInteractionFailureProvider, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
     [SerializeField] private string interactionText;
-    [SerializeField] private string actionText = "Use";
+    [SerializeField] private string actionText = "사용";
     [SerializeField] private int interactionPriority = 80;
     [SerializeField] private PlayerItemSO requiredItem;
     [SerializeField] private float useDistance = 3f;
@@ -86,13 +86,13 @@ public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IP
     {
         if (IsResolved)
         {
-            message = "This has already been resolved.";
+            message = "이미 해결되었습니다.";
             return true;
         }
 
         if (player == null)
         {
-            message = "Player not found.";
+            message = "플레이어를 찾을 수 없습니다.";
             return true;
         }
 
@@ -102,19 +102,19 @@ public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IP
 
         if (inventory == null)
         {
-            message = "Inventory not found.";
+            message = "인벤토리를 찾을 수 없습니다.";
             return true;
         }
 
         if (RequiredItemId == 0)
         {
-            message = "Required item is not set.";
+            message = "필요한 아이템이 설정되지 않았습니다.";
             return true;
         }
 
         if (Vector3.Distance(inventory.transform.position, transform.position) > useDistance)
         {
-            message = "You are too far away.";
+            message = "너무 멀리 있습니다.";
             return true;
         }
 
@@ -122,8 +122,8 @@ public abstract class NetworkItemUseTarget : NetworkBehaviour, IInteractable, IP
         {
             string itemName = requiredItem != null && !string.IsNullOrWhiteSpace(requiredItem.ItemName)
                 ? requiredItem.ItemName
-                : "Required item";
-            message = $"You need to hold {itemName}.";
+                : "필요한 아이템";
+            message = $"{itemName}을(를) 손에 들어야 합니다.";
             return true;
         }
 

@@ -1239,7 +1239,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b52e61b353444f0979ce0377c4deaa7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: Locker
+  interactionText: 사물함
   interactionPriority: 30
   spotId: 1
   cameraPose: {fileID: 853380790878911188}

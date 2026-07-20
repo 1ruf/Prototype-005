@@ -1504,9 +1504,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c628afc30534b9d429933b76ffd4ba3a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: Door
-  openActionText: Open
-  closeActionText: Close
+  interactionText: 문
+  openActionText: 열기
+  closeActionText: 닫기
   interactionPriority: 10
   closedRotation: {x: 0, y: 0, z: 0}
   openRotation: {x: 0, y: 93, z: 0}

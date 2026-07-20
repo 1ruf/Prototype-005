@@ -5,9 +5,9 @@ using UnityEngine;
 [RequireComponent(typeof(NetworkObject))]
 public class CabinetSingle : NetworkBehaviour, IInteractable, IPlayerInteractable, IInteractionCooldown, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
-    [SerializeField] private string interactionText = "Cabinet";
-    [SerializeField] private string openActionText = "Open";
-    [SerializeField] private string closeActionText = "Close";
+    [SerializeField] private string interactionText = "보관함";
+    [SerializeField] private string openActionText = "열기";
+    [SerializeField] private string closeActionText = "닫기";
     [SerializeField] private int interactPriority;
     [SerializeField] private Vector3 targetPos;
     [SerializeField] private float tweenDuration = 1f;

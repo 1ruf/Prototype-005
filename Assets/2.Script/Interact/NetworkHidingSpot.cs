@@ -8,8 +8,8 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
     private static readonly Dictionary<int, uint> Occupants = new();
     private const int StableIdSeed = 486187739;
 
-    [SerializeField] private string interactionText = "Locker";
-    [SerializeField] private string actionText = "Hide";
+    [SerializeField] private string interactionText = "사물함";
+    [SerializeField] private string actionText = "숨기";
     [SerializeField] private int interactionPriority = 30;
     [SerializeField] private int spotId = 1;
     [SerializeField] private Transform cameraPose;
@@ -108,13 +108,13 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
     {
         if (player == null)
         {
-            message = "Player not found.";
+            message = "플레이어를 찾을 수 없습니다.";
             return true;
         }
 
         if (IsOccupied)
         {
-            message = "This hiding spot is already occupied.";
+            message = "이미 다른 플레이어가 사용 중입니다.";
             return true;
         }
 
@@ -124,7 +124,7 @@ public class NetworkHidingSpot : MonoBehaviour, IPlayerInteractable, IHoldIntera
 
         if (hiding == null)
         {
-            message = "You cannot hide here.";
+            message = "여기에는 숨을 수 없습니다.";
             return true;
         }
 

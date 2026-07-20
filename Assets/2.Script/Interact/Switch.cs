@@ -3,8 +3,8 @@ using UnityEngine.Events;
 
 public class Switch : MonoBehaviour, IInteractable, IHoldInteractable, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
-    [SerializeField] private string interactionText = "Switch";
-    [SerializeField] private string actionText = "Use";
+    [SerializeField] private string interactionText = "스위치";
+    [SerializeField] private string actionText = "사용";
     [SerializeField] private int interactionPriority = 20;
     [SerializeField] private string powerKey = PowerKeys.LightFloor1;
     [SerializeField] private float requiredHoldTime;

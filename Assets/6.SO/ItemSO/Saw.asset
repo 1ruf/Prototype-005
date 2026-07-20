@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemId: 1001
   ItemSprite: {fileID: -1417078450, guid: fd4ec5fc7b91dae44a26bde5a0276e01, type: 3}
-  ItemName: Normal Key
-  Description: It can open normal lock.
+  ItemName: "\uC77C\uBC18 \uC5F4\uC1E0"
+  Description: "\uC77C\uBC18 \uC790\uBB3C\uC1E0\uB97C \uC5F4 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
   LocalPosition: {x: 0, y: 0, z: 0}
-  Useable: 0
+  Useable: 1
   ItemPrefab: {fileID: 2015168443688019592, guid: 9489ac010019e284daeaa934e04e310b, type: 3}
   HeldVisualPrefab: {fileID: 2214519177132238573, guid: 91822623502712b419a20e4b4473f219, type: 3}

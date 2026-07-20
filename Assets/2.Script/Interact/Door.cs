@@ -6,9 +6,9 @@ using DG.Tweening;
 [RequireComponent(typeof(NetworkObject))]
 public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILockable, IUnlockable, IHoldInteractable, IInteractionFailureProvider, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
-    [SerializeField] private string interactionText = "Door";
-    [SerializeField] private string openActionText = "Open";
-    [SerializeField] private string closeActionText = "Close";
+    [SerializeField] private string interactionText = "문";
+    [SerializeField] private string openActionText = "열기";
+    [SerializeField] private string closeActionText = "닫기";
     [SerializeField] private int interactionPriority = 10;
     [SerializeField] private Vector3 closedRotation = Vector3.zero;
     [SerializeField] private Vector3 openRotation = new Vector3(0, 120, 0);
@@ -86,13 +86,13 @@ public class Door : NetworkBehaviour, IInteractable, IPlayerInteractable, ILocka
     {
         if (IsBroken)
         {
-            message = "This door is broken.";
+            message = "문이 고장났습니다.";
             return true;
         }
 
         if (IsLocked)
         {
-            message = "This door is locked.";
+            message = "문이 잠겨 있습니다.";
             return true;
         }
 

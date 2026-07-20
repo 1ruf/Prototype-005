@@ -5,8 +5,8 @@ using UnityEngine;
 [RequireComponent(typeof(NetworkObject))]
 public class NetworkInventoryItem : NetworkBehaviour, IInteractable, IPlayerInteractable, IHoldInteractable, IInteractionFailureProvider, IInteractionPrompt, IInteractionActionPrompt, IInteractionPriority
 {
-    [SerializeField] private string fallbackInteractionText = "Item";
-    [SerializeField] private string actionText = "Pick Up";
+    [SerializeField] private string fallbackInteractionText = "아이템";
+    [SerializeField] private string actionText = "줍기";
     [SerializeField] private int interactionPriority = 100;
     [SerializeField] private PlayerItemSO item;
     [SerializeField] private float pickupDistance = 3f;
@@ -75,25 +75,25 @@ public class NetworkInventoryItem : NetworkBehaviour, IInteractable, IPlayerInte
     {
         if (!IsNetworkReady())
         {
-            message = "This item cannot be picked up yet.";
+            message = "아직 이 아이템을 주울 수 없습니다.";
             return true;
         }
 
         if (IsCollected)
         {
-            message = "This item has already been collected.";
+            message = "이미 획득한 아이템입니다.";
             return true;
         }
 
         if (item == null || item.itemId == 0)
         {
-            message = "Item data is missing.";
+            message = "아이템 정보가 없습니다.";
             return true;
         }
 
         if (player == null)
         {
-            message = "Player not found.";
+            message = "플레이어를 찾을 수 없습니다.";
             return true;
         }
 
@@ -103,19 +103,19 @@ public class NetworkInventoryItem : NetworkBehaviour, IInteractable, IPlayerInte
 
         if (inventory == null)
         {
-            message = "Inventory not found.";
+            message = "인벤토리를 찾을 수 없습니다.";
             return true;
         }
 
         if (Vector3.Distance(inventory.transform.position, transform.position) > pickupDistance)
         {
-            message = "You are too far away.";
+            message = "너무 멀리 있습니다.";
             return true;
         }
 
         if (!inventory.CanAddItem(item.itemId, 1))
         {
-            message = "Not enough inventory space.";
+            message = "인벤토리 공간이 부족합니다.";
             return true;
         }
 

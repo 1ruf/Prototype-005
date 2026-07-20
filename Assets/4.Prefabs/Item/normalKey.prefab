@@ -87,8 +87,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a91c134e5145ac4496c37e2ce05c99a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fallbackInteractionText: Item
-  actionText: Pick Up
+  fallbackInteractionText: 아이템
+  actionText: 줍기
   interactionPriority: 0
   item: {fileID: 11400000, guid: 14d754aafd9c18b489eb026d0fb6e835, type: 2}
   pickupDistance: 3
