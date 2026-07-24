@@ -1,9 +1,12 @@
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public sealed class LeverPowerController : MonoBehaviour, ILeverControllable, ILeverToggleable
+public sealed class LeverPowerController : MonoBehaviour, ILeverControllable, ILeverToggleable, IInteractionFailureProvider
 {
     [SerializeField] private string powerKey = PowerKeys.Floor1;
+    [SerializeField, Tooltip("When enabled, the lever can only be switched on once during a session.")]
+    private bool oneShot;
+    [SerializeField] private string oneShotFailureMessage = "This lever has already been used.";
 
     private Lever lever;
     private bool hasSynchronizedState;
@@ -42,12 +45,35 @@ public sealed class LeverPowerController : MonoBehaviour, ILeverControllable, IL
 
     public void SetLeverState(bool isOn)
     {
+        if (oneShot && NetworkPowerRuntime.GetPower(powerKey))
+            return;
+
         NetworkPowerRuntime.RequestSetPower(powerKey, isOn);
     }
 
     public void ToggleLeverState()
     {
+        if (oneShot)
+        {
+            if (!NetworkPowerRuntime.GetPower(powerKey))
+                NetworkPowerRuntime.RequestSetPower(powerKey, true);
+
+            return;
+        }
+
         NetworkPowerRuntime.RequestToggle(powerKey);
+    }
+
+    public bool TryGetInteractionFailureMessage(PlayerMovement player, out string message)
+    {
+        if (oneShot && NetworkPowerRuntime.GetPower(powerKey))
+        {
+            message = oneShotFailureMessage;
+            return true;
+        }
+
+        message = null;
+        return false;
     }
 
     private void HandlePowerStateChanged(string changedPowerKey, bool isOn)

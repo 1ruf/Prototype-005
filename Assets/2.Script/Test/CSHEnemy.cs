@@ -11,7 +11,8 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         Idle = 0,
         Patrol = 1,
         Chase = 2,
-        Investigate = 3
+        Investigate = 3,
+        Lure = 4
     }
 
     private interface IEnemyState
@@ -86,8 +87,11 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
     private IEnemyState patrolState;
     private IEnemyState chaseState;
     private IEnemyState investigateState;
+    private IEnemyState lureState;
     private Vector3 investigateCenter;
     private float investigateTimer;
+    private Vector3 localLureDestination;
+    private float localLureEndTime;
     private bool networkSpawned;
     private int renderedAttackSequence;
     private int renderedKillSequence;
@@ -102,6 +106,8 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
     [Networked] private TickTimer KillAnimationTimer { get; set; }
     [Networked] private int NetworkAttackSequence { get; set; }
     [Networked] private int NetworkKillSequence { get; set; }
+    [Networked] private Vector3 NetworkLureDestination { get; set; }
+    [Networked] private TickTimer LureTimer { get; set; }
 
     public int RealtimeEnemyId { get; private set; }
     public GameObject Owner => owner != null ? owner : gameObject;
@@ -139,6 +145,34 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
     public void SetRealtimeEnemyId(int enemyId)
     {
         RealtimeEnemyId = enemyId;
+    }
+
+    /// <summary>
+    /// Forces this enemy to investigate a map-wide lure. Only state authority may issue
+    /// the order; replicated state and pose keep every client visually in sync.
+    /// </summary>
+    public void BeginLure(Vector3 destination, float duration)
+    {
+        if (Object != null && !Object.HasStateAuthority)
+            return;
+
+        duration = Mathf.Max(0.1f, duration);
+        target = null;
+        perceptionComponent?.ResetTargetTracking();
+        navigationComponent?.ResetChaseTracking(null);
+
+        if (Object != null && networkSpawned)
+        {
+            NetworkLureDestination = destination;
+            LureTimer = TickTimer.CreateFromSeconds(Runner, duration);
+        }
+        else
+        {
+            localLureDestination = destination;
+            localLureEndTime = Time.time + duration;
+        }
+
+        ChangeState(EnemyStateId.Lure);
     }
 
     public void ConfigureLegacyComponents()
@@ -490,6 +524,16 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
 
         ClearExpiredKillAnimation();
 
+        if (IsLureActive())
+        {
+            if (currentState == null || currentState.Id != EnemyStateId.Lure)
+                ChangeState(EnemyStateId.Lure);
+        }
+        else if (currentState != null && currentState.Id == EnemyStateId.Lure)
+        {
+            ChangeState(EnemyStateId.Patrol);
+        }
+
         if (currentState == null)
             ChangeState(EnemyStateId.Patrol);
 
@@ -536,6 +580,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             EnemyStateId.Idle => idleState,
             EnemyStateId.Chase => chaseState,
             EnemyStateId.Investigate => investigateState,
+            EnemyStateId.Lure => lureState,
             _ => patrolState
         };
     }
@@ -546,6 +591,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         patrolState = new PatrolState(this);
         chaseState = new ChaseState(this);
         investigateState = new InvestigateState(this);
+        lureState = new LureState(this);
     }
 
     private void AcquireTarget(Transform newTarget)
@@ -589,7 +635,7 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         if (currentState.Id == EnemyStateId.Chase)
             return EnemyAnimationState.Chase;
 
-        if ((currentState.Id == EnemyStateId.Patrol || currentState.Id == EnemyStateId.Investigate)
+        if ((currentState.Id == EnemyStateId.Patrol || currentState.Id == EnemyStateId.Investigate || currentState.Id == EnemyStateId.Lure)
             && navigationComponent.IsMovingForAnimation())
             return EnemyAnimationState.Patrol;
 
@@ -612,6 +658,19 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
         return networkSpawned
             && KillAnimationTimer.IsRunning
             && !KillAnimationTimer.Expired(Runner);
+    }
+
+    private bool IsLureActive()
+    {
+        if (Object != null && networkSpawned)
+            return LureTimer.IsRunning && !LureTimer.Expired(Runner);
+
+        return localLureEndTime > Time.time;
+    }
+
+    private Vector3 GetLureDestination()
+    {
+        return Object != null && networkSpawned ? NetworkLureDestination : localLureDestination;
     }
 
     private void ClearExpiredKillAnimation()
@@ -864,6 +923,41 @@ public class CSHEnemy : NetworkBehaviour, INetworkEntityComponent
             destination = enemy.navigationComponent.GetRandomInvestigatePoint(
                 enemy.investigateCenter,
                 enemy.navigationComponent.InvestigateRadius);
+        }
+    }
+
+    private sealed class LureState : IEnemyState
+    {
+        private readonly CSHEnemy enemy;
+
+        public EnemyStateId Id => EnemyStateId.Lure;
+
+        public LureState(CSHEnemy enemy)
+        {
+            this.enemy = enemy;
+        }
+
+        public void Enter()
+        {
+            enemy.target = null;
+            enemy.perceptionComponent.ResetTargetTracking();
+            enemy.navigationComponent.ResetChaseTracking(null);
+        }
+
+        public void Tick(float deltaTime)
+        {
+            if (!enemy.IsLureActive())
+            {
+                enemy.ChangeState(EnemyStateId.Patrol);
+                return;
+            }
+
+            enemy.navigationComponent.MoveTo(enemy.GetLureDestination(), enemy.navigationComponent.MoveSpeed);
+            enemy.navigationComponent.RotateTowardMovement();
+        }
+
+        public void Exit()
+        {
         }
     }
 }
