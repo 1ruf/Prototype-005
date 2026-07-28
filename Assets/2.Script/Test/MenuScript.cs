@@ -16,7 +16,7 @@ public class MenuScript : MonoBehaviour
         Invoke("EnterScene", clip.length);
     }
 
-    private void EnterScene() => imageBlock.DOFade(1,2f).OnComplete(()=>SceneManager.LoadScene("CSHObunga"));
+    private void EnterScene() => imageBlock.DOFade(1, 2f).OnComplete(() => SceneManager.LoadScene("CSHObunga"));
     public void Exit()
     {
         Application.Quit();
