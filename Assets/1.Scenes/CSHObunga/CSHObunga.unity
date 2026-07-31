@@ -11823,7 +11823,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: f4c82518a4bc68140912eac0aeb75236, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -23.47
+      value: -23.33
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: f4c82518a4bc68140912eac0aeb75236, type: 3}
       propertyPath: m_LocalPosition.y
@@ -32380,7 +32380,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 보관함
+  m_text: "\uBCF4\uAD00\uD568"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 7af1b4fe0dd277a4884a63078701a248, type: 2}
   m_sharedMaterial: {fileID: -7021497474286831681, guid: 7af1b4fe0dd277a4884a63078701a248, type: 2}
@@ -55451,7 +55451,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 63997020ffa347c45a376bc1516001eb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: 파이프 손잡이
+  interactionText: "\uD30C\uC774\uD504 \uC190\uC7A1\uC774"
   openActionText: "\uC5F4\uAE30"
   closeActionText: "\uB2EB\uAE30"
   requiredHoldTime: 5
@@ -56784,7 +56784,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 원본이 승리했습니다!
+  m_text: "\uC6D0\uBCF8\uC774 \uC2B9\uB9AC\uD588\uC2B5\uB2C8\uB2E4!"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -84221,7 +84221,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 열기
+  m_text: "\uC5F4\uAE30"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 7af1b4fe0dd277a4884a63078701a248, type: 2}
   m_sharedMaterial: {fileID: -7021497474286831681, guid: 7af1b4fe0dd277a4884a63078701a248, type: 2}
@@ -84722,9 +84722,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c628afc30534b9d429933b76ffd4ba3a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: 문
-  openActionText: 열기
-  closeActionText: 닫기
+  interactionText: "\uBB38"
+  openActionText: "\uC5F4\uAE30"
+  closeActionText: "\uB2EB\uAE30"
   interactionPriority: 10
   closedRotation: {x: 0, y: 0, z: 0}
   openRotation: {x: 0, y: 120, z: 0}
@@ -92408,9 +92408,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c628afc30534b9d429933b76ffd4ba3a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: 문
-  openActionText: 열기
-  closeActionText: 닫기
+  interactionText: "\uBB38"
+  openActionText: "\uC5F4\uAE30"
+  closeActionText: "\uB2EB\uAE30"
   interactionPriority: 10
   closedRotation: {x: 0, y: 0, z: 0}
   openRotation: {x: 0, y: 120, z: 0}
@@ -93052,7 +93052,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 부품: 0/5
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -103293,8 +103293,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f8219c0e43220c49a8332ec9254d1ee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactionText: 나무 판자
-  actionText: 판자 자르기
+  interactionText: "\uB098\uBB34 \uD310\uC790"
+  actionText: "\uD310\uC790 \uC790\uB974\uAE30"
   interactionPriority: 80
   requiredItem: {fileID: 11400000, guid: bbf15e7d990b62047b4ae7b9fe3c2948, type: 2}
   useDistance: 3
