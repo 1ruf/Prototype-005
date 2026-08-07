@@ -63,7 +63,7 @@ PrefabInstance:
     - target: {fileID: -8213911686582676395, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: a5ee2eba9d2a4c24c8ca52bc9c6c0960, type: 2}
+      objectReference: {fileID: 2100000, guid: d76acfa72007b084696e7d9a368266d6, type: 2}
     - target: {fileID: -6351917679010831236, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       propertyPath: m_LocalPosition.z
       value: 0
@@ -78,7 +78,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       propertyPath: m_Name
-      value: model
+      value: Cabinet
       objectReference: {fileID: 0}
     - target: {fileID: 1931302091329365942, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       propertyPath: m_Layer
@@ -87,7 +87,7 @@ PrefabInstance:
     - target: {fileID: 2825493353318712573, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: a5ee2eba9d2a4c24c8ca52bc9c6c0960, type: 2}
+      objectReference: {fileID: 2100000, guid: d76acfa72007b084696e7d9a368266d6, type: 2}
     - target: {fileID: 3160874312625252270, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       propertyPath: m_Layer
       value: 9
@@ -99,11 +99,11 @@ PrefabInstance:
     - target: {fileID: 4803440205799917600, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: a5ee2eba9d2a4c24c8ca52bc9c6c0960, type: 2}
+      objectReference: {fileID: 2100000, guid: d76acfa72007b084696e7d9a368266d6, type: 2}
     - target: {fileID: 4845647591226758928, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: d1fe6afe11291564ea4741255e2be489, type: 2}
+      objectReference: {fileID: 2100000, guid: acacf0bf0504b0345b3c18f0170d11b1, type: 2}
     - target: {fileID: 6145964219752912169, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       propertyPath: m_LocalPosition.z
       value: 0
@@ -111,7 +111,7 @@ PrefabInstance:
     - target: {fileID: 8489688003590500664, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: a5ee2eba9d2a4c24c8ca52bc9c6c0960, type: 2}
+      objectReference: {fileID: 2100000, guid: d76acfa72007b084696e7d9a368266d6, type: 2}
     - target: {fileID: 8685893093191352454, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       propertyPath: m_LocalPosition.z
       value: 0
@@ -138,6 +138,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3160874312625252270, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2538530484047927518}
+    - targetCorrespondingSourceObject: {fileID: 3160874312625252270, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1537561024468149383}
     - targetCorrespondingSourceObject: {fileID: 4288083542007180765, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5461178830804766213}
@@ -150,6 +153,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4288083542007180765, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5265737191822235644}
+    - targetCorrespondingSourceObject: {fileID: 4288083542007180765, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2539138104935307379}
     - targetCorrespondingSourceObject: {fileID: 1931302091329365942, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6879867907741256278}
@@ -162,6 +168,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1931302091329365942, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 789104985964221303}
+    - targetCorrespondingSourceObject: {fileID: 1931302091329365942, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8000086140862369958}
     - targetCorrespondingSourceObject: {fileID: 561670273170419612, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2853084451386439742}
@@ -174,6 +183,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 561670273170419612, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8616507545599755592}
+    - targetCorrespondingSourceObject: {fileID: 561670273170419612, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3303300754072043635}
   m_SourcePrefab: {fileID: 100100000, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
 --- !u!1 &538905428785217453 stripped
 GameObject:
@@ -213,8 +225,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08e8f1d63faba7449ade0013c4e1e51e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  interactionText: "\uBCF4\uAD00\uD568"
+  openActionText: "\uC5F4\uAE30"
+  closeActionText: "\uB2EB\uAE30"
   interactPriority: 0
   targetPos: {x: 0, y: 0, z: 0.414}
+  tweenDuration: 1
+  interactionCooldownDuration: 0.1
+  requestValidationPolicy:
+    maxDistance: 5
+    requireLineOfSight: 0
+    lineOfSightMask:
+      serializedVersion: 2
+      m_Bits: 4294967291
+    requesterEyeHeight: 1.4
+    targetHeightOffset: 0.5
+    requestsPerSecond: 8
+    burstCapacity: 2
 --- !u!65 &4900842238586169485
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -248,8 +275,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08e8f1d63faba7449ade0013c4e1e51e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  interactionText: "\uBCF4\uAD00\uD568"
+  openActionText: "\uC5F4\uAE30"
+  closeActionText: "\uB2EB\uAE30"
   interactPriority: 0
   targetPos: {x: 0, y: 0, z: 0.414}
+  tweenDuration: 1
+  interactionCooldownDuration: 0.1
+  requestValidationPolicy:
+    maxDistance: 5
+    requireLineOfSight: 0
+    lineOfSightMask:
+      serializedVersion: 2
+      m_Bits: 4294967291
+    requesterEyeHeight: 1.4
+    targetHeightOffset: 0.5
+    requestsPerSecond: 8
+    burstCapacity: 2
+--- !u!114 &1537561024468149383
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 538905428785217453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 0
+  ObjectInterest: 1
+  Flags: 262144
+  NestedObjects: []
+  NetworkedBehaviours: []
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &1667854214583530974 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4288083542007180765, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
@@ -288,8 +348,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08e8f1d63faba7449ade0013c4e1e51e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  interactionText: "\uBCF4\uAD00\uD568"
+  openActionText: "\uC5F4\uAE30"
+  closeActionText: "\uB2EB\uAE30"
   interactPriority: 0
   targetPos: {x: 0, y: 0, z: 0.414}
+  tweenDuration: 1
+  interactionCooldownDuration: 0.1
+  requestValidationPolicy:
+    maxDistance: 5
+    requireLineOfSight: 0
+    lineOfSightMask:
+      serializedVersion: 2
+      m_Bits: 4294967291
+    requesterEyeHeight: 1.4
+    targetHeightOffset: 0.5
+    requestsPerSecond: 8
+    burstCapacity: 2
 --- !u!65 &4112056325237371953
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -323,8 +398,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08e8f1d63faba7449ade0013c4e1e51e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  interactionText: "\uBCF4\uAD00\uD568"
+  openActionText: "\uC5F4\uAE30"
+  closeActionText: "\uB2EB\uAE30"
   interactPriority: 0
   targetPos: {x: 0, y: 0, z: 0.414}
+  tweenDuration: 1
+  interactionCooldownDuration: 0.1
+  requestValidationPolicy:
+    maxDistance: 5
+    requireLineOfSight: 0
+    lineOfSightMask:
+      serializedVersion: 2
+      m_Bits: 4294967291
+    requesterEyeHeight: 1.4
+    targetHeightOffset: 0.5
+    requestsPerSecond: 8
+    burstCapacity: 2
+--- !u!114 &2539138104935307379
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1667854214583530974}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 0
+  ObjectInterest: 1
+  Flags: 262144
+  NestedObjects: []
+  NetworkedBehaviours: []
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &3128957146269677471 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 561670273170419612, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
@@ -363,8 +471,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08e8f1d63faba7449ade0013c4e1e51e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  interactionText: "\uBCF4\uAD00\uD568"
+  openActionText: "\uC5F4\uAE30"
+  closeActionText: "\uB2EB\uAE30"
   interactPriority: 0
   targetPos: {x: 0, y: 0, z: 0.414}
+  tweenDuration: 1
+  interactionCooldownDuration: 0.1
+  requestValidationPolicy:
+    maxDistance: 5
+    requireLineOfSight: 0
+    lineOfSightMask:
+      serializedVersion: 2
+      m_Bits: 4294967291
+    requesterEyeHeight: 1.4
+    targetHeightOffset: 0.5
+    requestsPerSecond: 8
+    burstCapacity: 2
 --- !u!65 &4228517871294983226
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -398,8 +521,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08e8f1d63faba7449ade0013c4e1e51e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  interactionText: "\uBCF4\uAD00\uD568"
+  openActionText: "\uC5F4\uAE30"
+  closeActionText: "\uB2EB\uAE30"
   interactPriority: 0
   targetPos: {x: 0, y: 0, z: 0.414}
+  tweenDuration: 1
+  interactionCooldownDuration: 0.1
+  requestValidationPolicy:
+    maxDistance: 5
+    requireLineOfSight: 0
+    lineOfSightMask:
+      serializedVersion: 2
+      m_Bits: 4294967291
+    requesterEyeHeight: 1.4
+    targetHeightOffset: 0.5
+    requestsPerSecond: 8
+    burstCapacity: 2
+--- !u!114 &3303300754072043635
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3128957146269677471}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 0
+  ObjectInterest: 1
+  Flags: 262144
+  NestedObjects: []
+  NetworkedBehaviours: []
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &3921052891079327669 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1931302091329365942, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}
@@ -438,8 +594,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08e8f1d63faba7449ade0013c4e1e51e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  interactionText: "\uBCF4\uAD00\uD568"
+  openActionText: "\uC5F4\uAE30"
+  closeActionText: "\uB2EB\uAE30"
   interactPriority: 0
   targetPos: {x: 0, y: 0, z: 0.414}
+  tweenDuration: 1
+  interactionCooldownDuration: 0.1
+  requestValidationPolicy:
+    maxDistance: 5
+    requireLineOfSight: 0
+    lineOfSightMask:
+      serializedVersion: 2
+      m_Bits: 4294967291
+    requesterEyeHeight: 1.4
+    targetHeightOffset: 0.5
+    requestsPerSecond: 8
+    burstCapacity: 2
 --- !u!65 &9158528323335405811
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -473,8 +644,41 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08e8f1d63faba7449ade0013c4e1e51e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  interactionText: "\uBCF4\uAD00\uD568"
+  openActionText: "\uC5F4\uAE30"
+  closeActionText: "\uB2EB\uAE30"
   interactPriority: 0
   targetPos: {x: 0, y: 0, z: 0.414}
+  tweenDuration: 1
+  interactionCooldownDuration: 0.1
+  requestValidationPolicy:
+    maxDistance: 5
+    requireLineOfSight: 0
+    lineOfSightMask:
+      serializedVersion: 2
+      m_Bits: 4294967291
+    requesterEyeHeight: 1.4
+    targetHeightOffset: 0.5
+    requestsPerSecond: 8
+    burstCapacity: 2
+--- !u!114 &8000086140862369958
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3921052891079327669}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SortKey: 0
+  ObjectInterest: 1
+  Flags: 262144
+  NestedObjects: []
+  NetworkedBehaviours: []
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &7881585938725500194 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -4483833198729974495, guid: 51384e2639e7ac94a9a58214354bebf6, type: 3}

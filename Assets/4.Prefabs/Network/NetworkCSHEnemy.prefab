@@ -1151,7 +1151,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 5e4638afc3b037b4caf7b330b873ce11, type: 2}
+  - {fileID: 2100000, guid: d5d42d4c248d73144a154aed3b16c0d3, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1323,7 +1323,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 38e3addfdb22c094ab736702cd693815, type: 2}
+  - {fileID: 2100000, guid: 1552cfb34de7d964eb2d76b0d6040dc7, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1800,6 +1800,9 @@ MonoBehaviour:
   chaseDoorBreakRadius: 0.65
   chaseDoorBreakHeight: 1.1
   chaseDoorBreakCooldown: 0.5
+  perceptionComponent: {fileID: 0}
+  navigationComponent: {fileID: 0}
+  combatComponent: {fileID: 0}
 --- !u!114 &6124938067429813641
 MonoBehaviour:
   m_ObjectHideFlags: 0

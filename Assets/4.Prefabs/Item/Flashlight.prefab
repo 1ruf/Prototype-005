@@ -299,7 +299,7 @@ PrefabInstance:
     - target: {fileID: -7635826562936255635, guid: b8b7af8db011f0842878549f6ab90ca0, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 1d73d0cb74f6c4d47b5de633d9bbf8e3, type: 2}
+      objectReference: {fileID: 2100000, guid: 2ae4dbf68f167ae4285d946215e138ed, type: 2}
     - target: {fileID: 919132149155446097, guid: b8b7af8db011f0842878549f6ab90ca0, type: 3}
       propertyPath: m_Name
       value: flashlight

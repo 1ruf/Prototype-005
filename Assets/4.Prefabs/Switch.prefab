@@ -66,8 +66,8 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  - {fileID: 2100000, guid: 3f207ee9b51d6aa49bc9b20fb0a43f0b, type: 2}
+  - {fileID: 2100000, guid: b3604cc2253cd4148b3272edbfaa56ed, type: 2}
+  - {fileID: 2100000, guid: a50859b2b4a2a6a44bba9f0dabbe187e, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -122,7 +122,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4215ac335ac6e4048903f284a55c9b82, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  interactionText: "\uC2A4\uC704\uCE58"
+  actionText: "\uC0AC\uC6A9"
+  interactionPriority: 20
   powerKey: _LIGHT_POWER_F1
+  requiredHoldTime: 0
   togglePower: 1
   targetPowerState: 1
   invokeTriggeredLocally: 0

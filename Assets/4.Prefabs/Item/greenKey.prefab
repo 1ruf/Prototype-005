@@ -87,8 +87,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a91c134e5145ac4496c37e2ce05c99a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fallbackInteractionText: 아이템
-  actionText: 줍기
+  fallbackInteractionText: "\uC544\uC774\uD15C"
+  actionText: "\uC90D\uAE30"
   interactionPriority: 0
   item: {fileID: 11400000, guid: d7886679d22def847a47d3277355451d, type: 2}
   pickupDistance: 3
@@ -154,7 +154,7 @@ PrefabInstance:
     - target: {fileID: 8563916002607691868, guid: 91822623502712b419a20e4b4473f219, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: f2a691564bf03dc4b8f1d41bdd48207b, type: 2}
+      objectReference: {fileID: 2100000, guid: 6f2f66a724a55014ba656c362e3147f8, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
