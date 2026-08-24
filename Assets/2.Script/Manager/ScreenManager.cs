@@ -231,12 +231,12 @@ public class ScreenManager : MonoBehaviour
             if (targetComponent == null)
                 return false;
 
-            candidate = new InteractionCandidate
+            candidate = new InteractionCandidate 
             {
-                TargetComponent = targetComponent,
-                PlayerInteraction = playerInteraction,
+                TargetComponent = targetComponent, 
+                PlayerInteraction = playerInteraction, 
                 Interaction = null,
-                HitInfo = hitInfo,
+                HitInfo = hitInfo, 
                 Priority = ResolveInteractionPriority(targetComponent),
                 TargetName = ResolveInteractionTargetName(targetComponent),
                 ActionText = ResolveInteractionActionText(targetComponent)
