@@ -18,7 +18,7 @@ public class CabinetSingle : NetworkBehaviour, IInteractable, IPlayerInteractabl
 
     [Networked] private NetworkBool IsOpenState { get; set; }
 
-    private Vector3 _originPos; 
+    private Vector3 _originPos;
 
     private bool localIsOpened;
     private bool hasAppliedVisualState;
